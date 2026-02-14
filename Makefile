@@ -11,7 +11,7 @@ FLAGS   = -interaction=nonstopmode -halt-on-error
 export TEXINPUTS := ./styles//:${TEXINPUTS}
 export BSTINPUTS := ./styles//:${BSTINPUTS}
 
-.PHONY: all clean watch quick test samples
+.PHONY: all clean watch quick test samples example
 
 # Full build: pdflatex -> bibtex -> pdflatex x2
 all: $(MAIN).pdf
@@ -37,6 +37,10 @@ test:
 # Generate sample PDFs for all venues (uses example/ content)
 samples:
 	./scripts/generate-samples.sh --example
+
+# Build with example/ content (auto-restores generic template)
+example:
+	./scripts/build-example.sh
 
 # Clean build artifacts
 clean:

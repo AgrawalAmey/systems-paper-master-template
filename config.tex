@@ -19,7 +19,7 @@
 % == Systems Conferences (ACM-style) ==
 % \def\targetconference{sosp}
 % \def\targetconference{eurosys}
-\def\targetconference{osdi}
+\def\targetconference{asplos}
 % \def\targetconference{socc}
 %
 % == Database Conferences ==
@@ -43,7 +43,7 @@
 %   Common symbols: *  \dagger  \ddagger  \S  \P  \|
 %   For multiple marks on one author: *,\dagger
 %
-% Texts: define \authorfnA..\authorfnE with the full footnote line.
+% Texts: define \authorfnA..\authorfnZ with the full footnote line.
 %   Include the symbol prefix for visual correspondence.
 %   Use $^{symbol}$ for the prefix: $^*$, $^\dagger$, $^\ddagger$, etc.
 % ============================================================
@@ -51,7 +51,7 @@
 % --- Per-Author Marks (leave undefined for no mark) ---
 % \def\authorAmark{*}
 
-% --- Footnote Texts (up to 5, rendered below author block) ---
+% --- Footnote Texts (up to 26, rendered below author block) ---
 % \def\authorfnA{$^*$Equal contribution.}
 
 % --- Author Comments Toggle ---
@@ -61,9 +61,29 @@
 \newif\ifpublicversion
 \publicversionfalse
 
+% --- Camera-Ready Toggle ---
+% \camerareadytrue  = final/accepted (no anonymization, no line numbers)
+% \camerareadyfalse = review/submission (anonymous where supported, review formatting)
+
+\newif\ifcameraready
+\camerareadyfalse
+
+% ============================================================
+% ACM CAMERA-READY METADATA (ACM venues only)
+% Uncomment and fill in after acceptance. Ignored in review mode.
+% ============================================================
+% \def\papercopyright{rightsretained}          % acm options: none, acmcopyright, rightsretained, etc.
+% \def\paperdoi{10.1145/xxxxxxx.xxxxxxx}
+% \def\paperisbn{978-x-xxxx-xxxx-x}
+% \def\confyear{2026}
+% \def\confname{Full Conference Name}          % e.g., 31st ACM International Conference on ...
+% \def\confshort{Conf'26}                      % e.g., ASPLOS'26
+% \def\confdate{Month Year}                    % e.g., March 2026
+% \def\conflocation{City, Country}             % e.g., Rotterdam, Netherlands
+
 % ============================================================
 % INSTITUTIONS
-% Define each with a letter key (A through J).
+% Define each with a letter key (A through Z).
 % Authors reference these by key.
 % ============================================================
 
@@ -77,7 +97,7 @@
 
 % ============================================================
 % AUTHORS
-% Define each with a letter key (A through J).
+% Define each with a letter key (A through Z).
 % Each author has: name, inst (institution key), email.
 % ============================================================
 
@@ -93,4 +113,4 @@
 \def\authorCinst{A}
 \def\authorCemail{carol@example.edu}
 
-% Add more authors (D through J) as needed following the same pattern.
+% Add more authors (D through Z) as needed following the same pattern.

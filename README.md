@@ -71,32 +71,24 @@ Author1¹  Author2²  Author3¹  Author4²  Author5³
 ├── algorithms/         # Algorithm pseudocode
 ├── styles/             # Conference .cls/.sty/.bst files
 ├── samples/            # Pre-built sample PDFs for each venue
-├── example/            # Working example project (Medha paper)
+├── example/            # Working example project
 ├── scripts/
 │   ├── test.sh         # Multi-venue compilation tests
-│   └── generate-samples.sh  # Generate sample PDFs for all venues
+│   ├── generate-samples.sh  # Generate sample PDFs for all venues
+│   └── build-example.sh     # Build with example/ content
 └── Makefile
 ```
 
 ## Example Project
 
-The `example/` directory contains a complete working paper (Medha, ASPLOS'26) that demonstrates the template with real content, figures, and references. Use it as a reference for how to structure your paper.
+The `example/` directory contains a complete working paper that demonstrates the template with real content, figures, and references. Use it as a reference for how to structure your paper.
 
 To build with the example content:
 ```bash
-# Copy example files into root
-cp example/config.tex config.tex
-cp example/references.bib references.bib
-cp example/macros-project.tex macros-project.tex
-cp example/content/*.tex content/
-rsync -a example/figures/ figures/
-rsync -a example/tables/ tables/
-
-# Build
-make
+make example
 ```
 
-The `make samples` command automatically uses the example content to generate sample PDFs for all venues.
+This builds in a temp directory (no changes to your working tree) and copies the resulting PDF to `main.pdf`. The `make samples` command similarly uses the example content to generate sample PDFs for all venues.
 
 ### Project-Specific Macros
 
@@ -121,16 +113,59 @@ All configuration lives in `config.tex`. It has four sections:
 
 ### Authors and Institutions
 ```latex
-% Institutions (A through J)
+% Institutions (A through Z)
 \def\instA{Georgia Institute of Technology}
 \def\instAcity{Atlanta}
 \def\instAcountry{USA}
 
-% Authors (A through J, referencing institution keys)
+% Authors (A through Z, referencing institution keys)
 \def\authorAname{First Author}
 \def\authorAinst{A}
 \def\authorAemail{first@example.com}
 ```
+
+### Camera-Ready Toggle
+```latex
+% In config.tex:
+\camerareadyfalse   % Review/submission (default): anonymous, line numbers, review banners
+\camerareadytrue    % Camera-ready/final: no anonymization, accepted formatting
+```
+
+| Family | Camera-ready | Review |
+|--------|-------------|--------|
+| ACM | Standard `acmart` | Adds `review,anonymous` options |
+| MLSys | `[accepted]` | No option (shows "Under review") |
+| NeurIPS | `[final]` | No option (anonymous + line numbers) |
+| COLM | `[final]` | `[submission]` (anonymous) |
+| USENIX | Shows authors | Hides author block |
+
+This toggle is independent of `\publicversion` (author comments) — you can use camera-ready layout with comments visible during final proofing.
+
+### ACM Camera-Ready Metadata
+
+For ACM venues, uncomment and fill in after acceptance (ignored in review mode):
+
+```latex
+\def\papercopyright{rightsretained}
+\def\paperdoi{10.1145/xxxxxxx.xxxxxxx}
+\def\paperisbn{978-x-xxxx-xxxx-x}
+\def\confyear{2026}
+\def\confname{31st ACM International Conference on ...}
+\def\confshort{ASPLOS'26}
+\def\confdate{March 2026}
+\def\conflocation{Rotterdam, Netherlands}
+```
+
+| Macro | Purpose |
+|-------|---------|
+| `\papercopyright` | Copyright type: `rightsretained`, `acmcopyright`, `none`, etc. |
+| `\paperdoi` | Paper DOI assigned by ACM |
+| `\paperisbn` | Proceedings ISBN |
+| `\confyear` | Conference year |
+| `\confname` | Full conference name |
+| `\confshort` | Short name for headers (e.g., `ASPLOS'26`) |
+| `\confdate` | Conference dates |
+| `\conflocation` | City, Country |
 
 ### Author Footnotes
 ```latex
@@ -155,7 +190,7 @@ Authors render in a **condensed format** with superscript institution numbers (a
 | `\getname{X}` | Author name with optional mark (no inst number) |
 | `\authormark{X}` | Superscript mark only (e.g., `*`, `†`) |
 | `\emitauthorfn` | Emit author footnotes as unnumbered footnote |
-| `\renderauthorfn` | Collect all `\authorfnA`..`\authorfnE` into one block |
+| `\renderauthorfn` | Collect all `\authorfnA`..`\authorfnZ` into one block |
 
 MLSys uses its own `\mlsysauthorlist` environment and is not condensed.
 
@@ -378,6 +413,7 @@ Colored inline comments for collaborative drafting. Hidden when `\publicversiont
 | `make clean` | Remove all build artifacts |
 | `make test` | Test compilation across all venues |
 | `make samples` | Generate sample PDFs in `samples/` for all venues |
+| `make example` | Build with example/ content (auto-restores generic template) |
 
 ### Troubleshooting
 
@@ -431,6 +467,30 @@ The template handles several cross-venue compatibility challenges automatically:
 - **ACM abstract placement**: ACM requires `\begin{abstract}...\end{abstract}` before `\maketitle`. All other venues place it after.
 - **MLSys title pattern**: MLSys requires `\twocolumn[\mlsystitle{...}...]` instead of `\maketitle`.
 - **Author marks in ACM**: ACM's `\MakeUppercase` breaks bare math mode. Resolved with `\textsuperscript{$...$}` wrapping.
+
+## Submission → Camera-Ready Workflow
+
+After your paper is accepted, edit `config.tex`:
+
+1. **Switch to camera-ready mode**:
+   ```latex
+   \camerareadytrue     % accepted formatting, no anonymization
+   \publicversiontrue   % hide author comments and TODOs
+   ```
+
+2. **Fill in ACM metadata** (ACM venues only) — uncomment and fill in:
+   ```latex
+   \def\papercopyright{rightsretained}
+   \def\paperdoi{10.1145/xxxxxxx.xxxxxxx}
+   \def\paperisbn{978-x-xxxx-xxxx-x}
+   \def\confyear{2026}
+   \def\confname{31st ACM International Conference on ...}
+   \def\confshort{ASPLOS'26}
+   \def\confdate{March 2026}
+   \def\conflocation{Rotterdam, Netherlands}
+   ```
+
+3. **Build and verify**: `make`
 
 ## Claude Code Integration
 

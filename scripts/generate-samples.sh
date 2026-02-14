@@ -2,10 +2,15 @@
 # ============================================================
 # Generate sample PDFs for all (or one) supported venues.
 # Compiles the template for each venue and copies the output
-# PDF to samples/<venue>.pdf.
+# PDF to samples/<mode>/<venue>.pdf.
 #
 # With --example, overlays example/ content (Medha paper) into
 # the root before building, then restores generic content.
+#
+# With --mode, controls which formatting mode(s) to generate:
+#   camera-ready  = final/accepted (no anonymization)
+#   review        = submission (anonymous where supported)
+#   both          = generate both (default)
 # ============================================================
 
 set -euo pipefail
@@ -29,6 +34,7 @@ NC='\033[0m'
 # --- Parse arguments ---
 SINGLE_VENUE=""
 USE_EXAMPLE=false
+MODE="both"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -40,12 +46,21 @@ while [[ $# -gt 0 ]]; do
             SINGLE_VENUE="$2"
             shift 2
             ;;
+        --mode)
+            MODE="$2"
+            if [[ "$MODE" != "camera-ready" && "$MODE" != "review" && "$MODE" != "both" ]]; then
+                echo "Error: --mode must be 'camera-ready', 'review', or 'both'"
+                exit 1
+            fi
+            shift 2
+            ;;
         -h|--help)
-            echo "Usage: $0 [--example] [--venue <name>]"
+            echo "Usage: $0 [--example] [--venue <name>] [--mode camera-ready|review|both]"
             echo ""
             echo "Options:"
             echo "  --example       Use example/ content (Medha paper) for samples"
             echo "  --venue <name>  Generate sample for a single venue"
+            echo "  --mode <mode>   Generate camera-ready, review, or both (default: both)"
             echo ""
             echo "Supported venues: ${ALL_VENUES[*]}"
             exit 0
@@ -106,15 +121,33 @@ if $USE_EXAMPLE; then
     rsync -a "$EXAMPLE_DIR/tables/" "$PROJECT_DIR/tables/"
 fi
 
-# --- Determine venues ---
+# --- Determine venues and modes ---
 if [[ -n "$SINGLE_VENUE" ]]; then
     VENUES=("$SINGLE_VENUE")
 else
     VENUES=("${ALL_VENUES[@]}")
 fi
 
-# --- Create output directory ---
-mkdir -p "$SAMPLES_DIR"
+if [[ "$MODE" == "both" ]]; then
+    MODES=("camera-ready" "review")
+else
+    MODES=("$MODE")
+fi
+
+# --- Create output directories ---
+for mode in "${MODES[@]}"; do
+    mkdir -p "$SAMPLES_DIR/$mode"
+done
+
+# --- Helper: set \cameraready in config.tex ---
+set_camera_ready() {
+    local val="$1"
+    if [[ "$val" == "true" ]]; then
+        perl -pi -e 's/^\\cameraready(true|false)/\\camerareadytrue/' "$CONFIG_FILE"
+    else
+        perl -pi -e 's/^\\cameraready(true|false)/\\camerareadyfalse/' "$CONFIG_FILE"
+    fi
+}
 
 # --- Generate samples ---
 PASS=0
@@ -124,46 +157,56 @@ RESULTS=()
 echo -e "${BOLD}Generating sample PDFs...${NC}"
 echo ""
 
-for venue in "${VENUES[@]}"; do
-    # Update config.tex with target venue (use perl to avoid BSD sed corruption)
-    export VENUE="$venue"
-    perl -pi -e 's/^\\def\\targetconference\{[^}]*\}/\\def\\targetconference{$ENV{VENUE}}/' "$CONFIG_FILE"
+for mode in "${MODES[@]}"; do
+    echo -e "${BOLD}Mode: $mode${NC}"
 
-    printf "  %-12s " "$venue"
-
-    # Clean and build (retry up to 3 times to handle transient TeX issues)
-    BUILD_OK=false
-    for attempt in 1 2 3; do
-        if make -C "$PROJECT_DIR" clean all > /dev/null 2>&1; then
-            BUILD_OK=true
-            break
-        fi
-        sleep 1
-    done
-
-    if $BUILD_OK; then
-        # Check for errors in log
-        if grep -q "^!" "$PROJECT_DIR/main.log" 2>/dev/null; then
-            echo -e "${RED}FAIL${NC} (errors in log)"
-            RESULTS+=("$venue:FAIL")
-            FAIL=$((FAIL + 1))
-        else
-            # Copy PDF to samples/
-            cp "$PROJECT_DIR/main.pdf" "$SAMPLES_DIR/$venue.pdf"
-            echo -e "${GREEN}OK${NC} -> samples/$venue.pdf"
-            RESULTS+=("$venue:OK")
-            PASS=$((PASS + 1))
-        fi
+    if [[ "$mode" == "camera-ready" ]]; then
+        set_camera_ready "true"
     else
-        echo -e "${RED}FAIL${NC} (build failed)"
-        RESULTS+=("$venue:FAIL")
-        FAIL=$((FAIL + 1))
+        set_camera_ready "false"
     fi
+
+    for venue in "${VENUES[@]}"; do
+        # Update config.tex with target venue (use perl to avoid BSD sed corruption)
+        export VENUE="$venue"
+        perl -pi -e 's/^\\def\\targetconference\{[^}]*\}/\\def\\targetconference{$ENV{VENUE}}/' "$CONFIG_FILE"
+
+        printf "  %-12s " "$venue"
+
+        # Clean and build (retry up to 3 times to handle transient TeX issues)
+        BUILD_OK=false
+        for attempt in 1 2 3; do
+            if make -C "$PROJECT_DIR" clean all > /dev/null 2>&1; then
+                BUILD_OK=true
+                break
+            fi
+            sleep 1
+        done
+
+        if $BUILD_OK; then
+            # Check for errors in log
+            if grep -q "^!" "$PROJECT_DIR/main.log" 2>/dev/null; then
+                echo -e "${RED}FAIL${NC} (errors in log)"
+                RESULTS+=("$mode/$venue:FAIL")
+                FAIL=$((FAIL + 1))
+            else
+                # Copy PDF to samples/<mode>/
+                cp "$PROJECT_DIR/main.pdf" "$SAMPLES_DIR/$mode/$venue.pdf"
+                echo -e "${GREEN}OK${NC} -> samples/$mode/$venue.pdf"
+                RESULTS+=("$mode/$venue:OK")
+                PASS=$((PASS + 1))
+            fi
+        else
+            echo -e "${RED}FAIL${NC} (build failed)"
+            RESULTS+=("$mode/$venue:FAIL")
+            FAIL=$((FAIL + 1))
+        fi
+    done
+    echo ""
 done
 
 # --- Summary ---
 TOTAL=$((PASS + FAIL))
-echo ""
 echo -e "${BOLD}Results: $PASS/$TOTAL generated${NC}"
 
 if [[ $FAIL -gt 0 ]]; then

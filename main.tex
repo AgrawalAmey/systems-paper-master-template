@@ -60,23 +60,37 @@
 % ============================================================
 
 % --- ACM venues (acmart) ---
+% Camera-ready: no review/anonymous options
+% Review: add review,anonymous for double-blind submission
 \ifx\targetconference\confasplos
-    \documentclass[sigplan,10pt]{acmart}
+    \ifcameraready \documentclass[sigplan,10pt]{acmart}
+    \else          \documentclass[sigplan,10pt,review,anonymous]{acmart}
+    \fi
 \fi
 \ifx\targetconference\confsosp
-    \documentclass[nonacm,sigplan,10pt]{acmart}
+    \ifcameraready \documentclass[nonacm,sigplan,10pt]{acmart}
+    \else          \documentclass[nonacm,sigplan,10pt,review,anonymous]{acmart}
+    \fi
 \fi
 \ifx\targetconference\confeurosys
-    \documentclass[sigplan,10pt]{acmart}
+    \ifcameraready \documentclass[sigplan,10pt]{acmart}
+    \else          \documentclass[sigplan,10pt,review,anonymous]{acmart}
+    \fi
 \fi
 \ifx\targetconference\confsocc
-    \documentclass[sigconf,10pt]{acmart}
+    \ifcameraready \documentclass[sigconf,10pt]{acmart}
+    \else          \documentclass[sigconf,10pt,review,anonymous]{acmart}
+    \fi
 \fi
 \ifx\targetconference\confvldb
-    \documentclass[sigconf,nonacm]{acmart}
+    \ifcameraready \documentclass[sigconf,nonacm]{acmart}
+    \else          \documentclass[sigconf,nonacm,review,anonymous]{acmart}
+    \fi
 \fi
 \ifx\targetconference\confsigmod
-    \documentclass[sigconf]{acmart}
+    \ifcameraready \documentclass[sigconf]{acmart}
+    \else          \documentclass[sigconf,review,anonymous]{acmart}
+    \fi
 \fi
 
 % --- USENIX venues (article + usenix style) ---
@@ -100,21 +114,30 @@
 \fi
 
 % --- MLSys ---
-% Options: accepted, final
+% Camera-ready: [accepted] shows author names
+% Review: (no option) shows "Under review" + line numbers
 \ifx\targetconference\confmlsys
-    \usepackage[accepted]{mlsys2024}
+    \ifcameraready \usepackage[accepted]{mlsys2024}
+    \else          \usepackage{mlsys2024}
+    \fi
 \fi
 
 % --- NeurIPS ---
-% Options: preprint, final, nonatbib
+% Camera-ready: [final] shows author names
+% Review: (no option) anonymous with line numbers
 \ifx\targetconference\confneurips
-    \usepackage[preprint]{neurips_2025}
+    \ifcameraready \usepackage[final]{neurips_2025}
+    \else          \usepackage{neurips_2025}
+    \fi
 \fi
 
 % --- COLM ---
-% Options: final
+% Camera-ready: [final] shows author names
+% Review: [submission] enables anonymization
 \ifx\targetconference\confcolm
-    \usepackage[final]{colm2025_conference}
+    \ifcameraready \usepackage[final]{colm2025_conference}
+    \else          \usepackage[submission]{colm2025_conference}
+    \fi
 \fi
 
 
@@ -150,6 +173,27 @@
   \ifdefined\authorfnC\quad\authorfnC\fi
   \ifdefined\authorfnD\quad\authorfnD\fi
   \ifdefined\authorfnE\quad\authorfnE\fi
+  \ifdefined\authorfnF\quad\authorfnF\fi
+  \ifdefined\authorfnG\quad\authorfnG\fi
+  \ifdefined\authorfnH\quad\authorfnH\fi
+  \ifdefined\authorfnI\quad\authorfnI\fi
+  \ifdefined\authorfnJ\quad\authorfnJ\fi
+  \ifdefined\authorfnK\quad\authorfnK\fi
+  \ifdefined\authorfnL\quad\authorfnL\fi
+  \ifdefined\authorfnM\quad\authorfnM\fi
+  \ifdefined\authorfnN\quad\authorfnN\fi
+  \ifdefined\authorfnO\quad\authorfnO\fi
+  \ifdefined\authorfnP\quad\authorfnP\fi
+  \ifdefined\authorfnQ\quad\authorfnQ\fi
+  \ifdefined\authorfnR\quad\authorfnR\fi
+  \ifdefined\authorfnS\quad\authorfnS\fi
+  \ifdefined\authorfnT\quad\authorfnT\fi
+  \ifdefined\authorfnU\quad\authorfnU\fi
+  \ifdefined\authorfnV\quad\authorfnV\fi
+  \ifdefined\authorfnW\quad\authorfnW\fi
+  \ifdefined\authorfnX\quad\authorfnX\fi
+  \ifdefined\authorfnY\quad\authorfnY\fi
+  \ifdefined\authorfnZ\quad\authorfnZ\fi
 }
 % Emit author footnotes as an unnumbered footnote (non-MLSys venues)
 \newcommand{\emitauthorfn}{%
@@ -170,6 +214,10 @@
 }
 \numberinst{A}\numberinst{B}\numberinst{C}\numberinst{D}\numberinst{E}
 \numberinst{F}\numberinst{G}\numberinst{H}\numberinst{I}\numberinst{J}
+\numberinst{K}\numberinst{L}\numberinst{M}\numberinst{N}\numberinst{O}
+\numberinst{P}\numberinst{Q}\numberinst{R}\numberinst{S}\numberinst{T}
+\numberinst{U}\numberinst{V}\numberinst{W}\numberinst{X}\numberinst{Y}
+\numberinst{Z}
 
 % Render author name with superscript institution number + optional mark
 \newcommand{\authorwithnum}[1]{%
@@ -185,6 +233,10 @@
   \authorwithnum{A}%
   \addauthor{B}\addauthor{C}\addauthor{D}\addauthor{E}%
   \addauthor{F}\addauthor{G}\addauthor{H}\addauthor{I}\addauthor{J}%
+  \addauthor{K}\addauthor{L}\addauthor{M}\addauthor{N}\addauthor{O}%
+  \addauthor{P}\addauthor{Q}\addauthor{R}\addauthor{S}\addauthor{T}%
+  \addauthor{U}\addauthor{V}\addauthor{W}\addauthor{X}\addauthor{Y}%
+  \addauthor{Z}%
 }
 
 % Institution legend: ^1Institution1  ^2Institution2  ...
@@ -197,6 +249,10 @@
   \ifdefined\instA $^{\text{\instnumA}}$\instA\fi
   \addinstlegend{B}\addinstlegend{C}\addinstlegend{D}\addinstlegend{E}%
   \addinstlegend{F}\addinstlegend{G}\addinstlegend{H}\addinstlegend{I}\addinstlegend{J}%
+  \addinstlegend{K}\addinstlegend{L}\addinstlegend{M}\addinstlegend{N}\addinstlegend{O}%
+  \addinstlegend{P}\addinstlegend{Q}\addinstlegend{R}\addinstlegend{S}\addinstlegend{T}%
+  \addinstlegend{U}\addinstlegend{V}\addinstlegend{W}\addinstlegend{X}\addinstlegend{Y}%
+  \addinstlegend{Z}%
 }
 \makeatother
 
@@ -205,13 +261,22 @@
 % ACM-SPECIFIC METADATA
 % ============================================================
 \ifacmvenue
-    \settopmatter{printfolios=false, printacmref=false}
-    \setcopyright{none}
-    \acmDOI{}
-    \acmISBN{}
-    % Fill in for camera-ready:
-    % \acmYear{2026}
-    % \acmConference[Conf'26]{Full Conference Name}{Month Year}{City, Country}
+    \ifcameraready
+        % Camera-ready: uses macros from config.tex if defined
+        % \expandafter needed: \setcopyright uses xkeyval which doesn't expand macros
+        \ifdefined\papercopyright \expandafter\setcopyright\expandafter{\papercopyright} \fi
+        \ifdefined\paperdoi \acmDOI{\paperdoi} \fi
+        \ifdefined\paperisbn \acmISBN{\paperisbn} \fi
+        \ifdefined\confyear \acmYear{\confyear} \fi
+        \ifdefined\confname
+            \acmConference[\confshort]{\confname}{\confdate}{\conflocation}
+        \fi
+    \else
+        \settopmatter{printfolios=false, printacmref=false}
+        \setcopyright{none}
+        \acmDOI{}
+        \acmISBN{}
+    \fi
 \fi
 
 
@@ -231,10 +296,12 @@
 % --- USENIX venues (OSDI, NSDI) ---
 \ifusenixvenue
     \title{\papertitle}
-    \author{
-        \parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\condensedauthorlist} \\[0.3em]
-        {\normalsize\upshape\parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\instlegend}}
-    }
+    \ifcameraready
+        \author{
+            \parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\condensedauthorlist} \\[0.3em]
+            {\normalsize\upshape\parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\instlegend}}
+        }
+    \fi
 \fi
 
 % --- NeurIPS, COLM (condensed with numbered institutions) ---
@@ -270,7 +337,7 @@
 % --- USENIX: maketitle then abstract ---
 \ifusenixvenue
     \maketitle
-    \emitauthorfn
+    \ifcameraready \emitauthorfn \fi
     \begin{abstract}
         \input{content/abstract}
     \end{abstract}
@@ -292,6 +359,22 @@
         \ifdefined\authorHname \mlsysauthor{\getname{H}}{aff\authorHinst} \fi
         \ifdefined\authorIname \mlsysauthor{\getname{I}}{aff\authorIinst} \fi
         \ifdefined\authorJname \mlsysauthor{\getname{J}}{aff\authorJinst} \fi
+        \ifdefined\authorKname \mlsysauthor{\getname{K}}{aff\authorKinst} \fi
+        \ifdefined\authorLname \mlsysauthor{\getname{L}}{aff\authorLinst} \fi
+        \ifdefined\authorMname \mlsysauthor{\getname{M}}{aff\authorMinst} \fi
+        \ifdefined\authorNname \mlsysauthor{\getname{N}}{aff\authorNinst} \fi
+        \ifdefined\authorOname \mlsysauthor{\getname{O}}{aff\authorOinst} \fi
+        \ifdefined\authorPname \mlsysauthor{\getname{P}}{aff\authorPinst} \fi
+        \ifdefined\authorQname \mlsysauthor{\getname{Q}}{aff\authorQinst} \fi
+        \ifdefined\authorRname \mlsysauthor{\getname{R}}{aff\authorRinst} \fi
+        \ifdefined\authorSname \mlsysauthor{\getname{S}}{aff\authorSinst} \fi
+        \ifdefined\authorTname \mlsysauthor{\getname{T}}{aff\authorTinst} \fi
+        \ifdefined\authorUname \mlsysauthor{\getname{U}}{aff\authorUinst} \fi
+        \ifdefined\authorVname \mlsysauthor{\getname{V}}{aff\authorVinst} \fi
+        \ifdefined\authorWname \mlsysauthor{\getname{W}}{aff\authorWinst} \fi
+        \ifdefined\authorXname \mlsysauthor{\getname{X}}{aff\authorXinst} \fi
+        \ifdefined\authorYname \mlsysauthor{\getname{Y}}{aff\authorYinst} \fi
+        \ifdefined\authorZname \mlsysauthor{\getname{Z}}{aff\authorZinst} \fi
     \end{mlsysauthorlist}
     \ifdefined\instA \mlsysaffiliation{affA}{\instA} \fi
     \ifdefined\instB \mlsysaffiliation{affB}{\instB} \fi
@@ -303,6 +386,22 @@
     \ifdefined\instH \mlsysaffiliation{affH}{\instH} \fi
     \ifdefined\instI \mlsysaffiliation{affI}{\instI} \fi
     \ifdefined\instJ \mlsysaffiliation{affJ}{\instJ} \fi
+    \ifdefined\instK \mlsysaffiliation{affK}{\instK} \fi
+    \ifdefined\instL \mlsysaffiliation{affL}{\instL} \fi
+    \ifdefined\instM \mlsysaffiliation{affM}{\instM} \fi
+    \ifdefined\instN \mlsysaffiliation{affN}{\instN} \fi
+    \ifdefined\instO \mlsysaffiliation{affO}{\instO} \fi
+    \ifdefined\instP \mlsysaffiliation{affP}{\instP} \fi
+    \ifdefined\instQ \mlsysaffiliation{affQ}{\instQ} \fi
+    \ifdefined\instR \mlsysaffiliation{affR}{\instR} \fi
+    \ifdefined\instS \mlsysaffiliation{affS}{\instS} \fi
+    \ifdefined\instT \mlsysaffiliation{affT}{\instT} \fi
+    \ifdefined\instU \mlsysaffiliation{affU}{\instU} \fi
+    \ifdefined\instV \mlsysaffiliation{affV}{\instV} \fi
+    \ifdefined\instW \mlsysaffiliation{affW}{\instW} \fi
+    \ifdefined\instX \mlsysaffiliation{affX}{\instX} \fi
+    \ifdefined\instY \mlsysaffiliation{affY}{\instY} \fi
+    \ifdefined\instZ \mlsysaffiliation{affZ}{\instZ} \fi
     \mlsyscorrespondingauthor{\authorAname}{\authorAemail}
     \mlsyskeywords{\paperkeywords}
     \vskip 0.3in

@@ -43,7 +43,7 @@
 %   Common symbols: *  \dagger  \ddagger  \S  \P  \|
 %   For multiple marks on one author: *,\dagger
 %
-% Texts: define \authorfnA..\authorfnE with the full footnote line.
+% Texts: define \authorfnA..\authorfnZ with the full footnote line.
 %   Include the symbol prefix for visual correspondence.
 %   Use $^{symbol}$ for the prefix: $^*$, $^\dagger$, $^\ddagger$, etc.
 % ============================================================
@@ -51,7 +51,7 @@
 % --- Per-Author Marks (leave undefined for no mark) ---
 % \def\authorAmark{*}
 
-% --- Footnote Texts (up to 5, rendered below author block) ---
+% --- Footnote Texts (up to 26, rendered below author block) ---
 % \def\authorfnA{$^*$Equal contribution.}
 
 % --- Author Comments Toggle ---
@@ -61,9 +61,29 @@
 \newif\ifpublicversion
 \publicversiontrue
 
+% --- Camera-Ready Toggle ---
+% \camerareadytrue  = final/accepted (no anonymization, no line numbers)
+% \camerareadyfalse = review/submission (anonymous where supported, review formatting)
+
+\newif\ifcameraready
+\camerareadytrue
+
+% ============================================================
+% ACM CAMERA-READY METADATA (ACM venues only)
+% Uncomment and fill in after acceptance. Ignored in review mode.
+% ============================================================
+% \def\papercopyright{rightsretained}
+% \def\paperdoi{10.1145/xxxxxxx.xxxxxxx}
+% \def\paperisbn{978-x-xxxx-xxxx-x}
+% \def\confyear{2025}
+% \def\confname{30th ACM International Conference on ...}
+% \def\confshort{ASPLOS'25}
+% \def\confdate{March 2025}
+% \def\conflocation{Rotterdam, Netherlands}
+
 % ============================================================
 % INSTITUTIONS
-% Define each with a letter key (A through J).
+% Define each with a letter key (A through Z).
 % Authors reference these by key.
 % ============================================================
 
@@ -81,7 +101,7 @@
 
 % ============================================================
 % AUTHORS
-% Define each with a letter key (A through J).
+% Define each with a letter key (A through Z).
 % Each author has: name, inst (institution key), email.
 % ============================================================
 
@@ -121,4 +141,4 @@
 \def\authorIinst{A}
 \def\authorIemail{esha.choukse@microsoft.com}
 
-% Add more authors (D through J) as needed following the same pattern.
+% Add more authors (D through Z) as needed following the same pattern.
