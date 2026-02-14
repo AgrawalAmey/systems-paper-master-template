@@ -1,0 +1,18 @@
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.49\linewidth}
+        \includegraphics[width=\linewidth]{figures/chunked_prefills/preemption_granularity_llama_7b_medha.pdf}
+        \caption{Preemption granularity enabled on 1M token sequences prefill with Llama-3 8B.}
+        
+        \label{fig:sppsched:preemptiongran}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\linewidth}   
+    \includegraphics[width=1\linewidth]{figures/chunked_prefills/chunking_overhead_attn_7b.pdf}
+    \vspace{-0.25in}
+    \caption{Self-Attention computation time with chunked prefill for 1M tokens with \llamaL{} using 8 H100s.
+    }
+    \label{fig:chunkedprefill:overheadattnonly}    
+    \end{subfigure}
+    \caption{Efficacy of chunked prefill for long-context inference.}
+    % \vspace{-0.1in}
+\end{figure}

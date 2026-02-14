@@ -1,0 +1,18 @@
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.49\linewidth} 
+    \includegraphics[width=0.95\linewidth]{figures/experiments/longservepp/longservepp_moneta_comparison.pdf}
+    \caption{Normalized completion rate.}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\linewidth} 
+    \includegraphics[width=\linewidth]{figures/experiments/longservepp/a100_long_tpot_longservepp_medha.pdf}
+    \caption{Decode latency at 0.75 QPS.}
+    \end{subfigure}
+    \caption{
+        Impact of pool fragmentation on long requests for \llamaS{} on 16-A100 with 5\% long requests.
+        \sysname{} maintains maximum throughput and lowest latency.
+        Adding a dedicated reserved pool to \ls{} (+Reserv) to mitigate HOL blocking for short requests fragments resources and further degrades overall completion rate for long requests compared to both standard \ls{}.
+    }
+    \label{fig:experiments:longservepp}    
+    % \vspace{-0.1in}
+\end{figure}

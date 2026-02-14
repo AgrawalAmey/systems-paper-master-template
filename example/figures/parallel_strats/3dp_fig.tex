@@ -1,0 +1,20 @@
+\begin{figure}[t!]
+    \centering
+    \includegraphics[width=0.9\linewidth]{figures/parallel_strats/moneta_hld_new.pdf}
+    % \vspace{-0.1in}
+    % \caption{
+    %     \sysname{} 3D Parallelism with $p_{tp} = 8$, $p_{spp} = 2$, and $p_{kvp} = 2$}
+    \caption{
+    \sysname{} architecture for efficient long-context inference.
+    The \emph{Replica Controller} centrally manages the request life-cycle, featuring a slack-aware \emph{Batch Scheduler} and a \emph{Batch Packer} to optimize for SLOs.
+    It dispatches batches to the \emph{3D Parallel Execution Engine}, which leverages \sysname{}'s novel combination of KVP, SPP, and TP.
+    % \sysname{} architecture overview showing the lifecycle of a long-context LLM inference request.
+    % The Replica Controller decides the best batching strategy and executes the request across GPUs.
+    %(\textit{Top}) 3D parallelism that combines TP, SPP, and KVP.
+    % Each KVP group includes a full model replica with SPP across servers, and TP across GPUs within a server. (\textit{Bottom}) Online request scheduling and load balancing
+    %\esha{LB and batcher in this diagram are very unclear}
+    % \todo{extend}
+    }
+    \label{fig:hld}    
+    % \vspace{-0.1in}
+\end{figure}

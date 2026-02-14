@@ -1,0 +1,34 @@
+\begin{table}[t]
+\setlength{\abovecaptionskip}{2pt}
+\setlength{\belowcaptionskip}{0pt}
+    \centering
+    \tiny{
+    \footnotesize
+    \caption{Definitions of notations in equations.}
+    \label{tab:notation}
+    \begin{tabular}{cc}
+        \toprule
+        \textbf{Notation} & \textbf{Definition} \\
+        \midrule
+        $n$ & number of tokens \\
+        % $n_q$ or $n_{kv}$  & number of query or key-value tokens \\
+        % $l$ & number of layers \\
+        $h_q$ or $h_{kv}$ & number of query or key-value heads \\
+        $d$ & attention head dimension \\
+        % $p$ & total number of workers \\
+        $p_{j}$ & parallelism degree for strategy \emph{j}. \eg $p_{tp}$ for TP \\
+        % $M_{kv}$ & memory required for KV cache \\
+        % $F_{a}$ & attention flops \\
+        % $R_{a}$ & number of bytes read for attention \\
+%        $R_{cp}$ & number of bytes read for chunked prefill attention  \\
+        $I$ & arithmetic intensity \\
+%        $F^{i}_{cp}$ & chunked prefill attention FLOP for i$^{th}$ chunk \\
+%        $R^{i}_{cp}$ & chunked prefill attention read-bytes for i$^{th}$ chunk \\
+%        $I^{i}_{cp}$ & chunked prefill attention arithmetic intensity for i$^{th}$ chunk \\
+        $c$ & chunk size \\
+        % $T$ & execution time \\
+        % $T_p$ or $T_d$ & prefill latency or decode latency\\
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}

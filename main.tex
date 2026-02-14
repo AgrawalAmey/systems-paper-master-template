@@ -1,0 +1,399 @@
+% ============================================================
+%  SYSTEMS PAPER MASTER TEMPLATE
+%
+%  Supports: MLSys, NeurIPS, COLM, ICML, ICLR,
+%            OSDI, NSDI,
+%            SOSP, EuroSys, ASPLOS, SoCC,
+%            VLDB, SIGMOD
+%
+%  Usage:
+%    1. Edit config.tex to select your target conference and
+%       fill in all metadata (title, authors, institutions)
+%    2. Write your content in content/*.tex
+%    3. Build with: make  (or: latexmk -pdf main)
+% ============================================================
+
+\input{config}
+
+% ============================================================
+% CONFERENCE RESOLUTION
+% ============================================================
+
+% --- Conference name constants ---
+\def\confmlsys{mlsys}
+\def\confneurips{neurips}
+\def\confcolm{colm}
+\def\conficml{icml}
+\def\conficlr{iclr}
+\def\confosdi{osdi}
+\def\confsosp{sosp}
+\def\confnsdi{nsdi}
+\def\confasplos{asplos}
+\def\confeurosys{eurosys}
+\def\confsocc{socc}
+\def\confvldb{vldb}
+\def\confsigmod{sigmod}
+
+% --- Conference family flags ---
+\newif\ifacmvenue
+\newif\ifusenixvenue
+\newif\ifmlvenue
+
+% ACM venues
+\ifx\targetconference\confasplos   \acmvenuetrue \fi
+\ifx\targetconference\confsosp     \acmvenuetrue \fi
+\ifx\targetconference\confeurosys  \acmvenuetrue \fi
+\ifx\targetconference\confsocc     \acmvenuetrue \fi
+\ifx\targetconference\confvldb     \acmvenuetrue \fi
+\ifx\targetconference\confsigmod   \acmvenuetrue \fi
+
+% USENIX venues
+\ifx\targetconference\confosdi  \usenixvenuetrue \fi
+\ifx\targetconference\confnsdi  \usenixvenuetrue \fi
+
+% ML venues
+\ifx\targetconference\confmlsys   \mlvenuetrue \fi
+\ifx\targetconference\confneurips \mlvenuetrue \fi
+\ifx\targetconference\confcolm    \mlvenuetrue \fi
+\ifx\targetconference\conficml    \mlvenuetrue \fi
+\ifx\targetconference\conficlr    \mlvenuetrue \fi
+
+
+% ============================================================
+% DOCUMENT CLASS
+% ============================================================
+
+% --- ACM venues (acmart) ---
+\ifx\targetconference\confasplos
+    \documentclass[sigplan,10pt]{acmart}
+\fi
+\ifx\targetconference\confsosp
+    \documentclass[nonacm,sigplan,10pt]{acmart}
+\fi
+\ifx\targetconference\confeurosys
+    \documentclass[sigplan,10pt]{acmart}
+\fi
+\ifx\targetconference\confsocc
+    \documentclass[sigconf,10pt]{acmart}
+\fi
+\ifx\targetconference\confvldb
+    \documentclass[sigconf,nonacm]{acmart}
+\fi
+\ifx\targetconference\confsigmod
+    \documentclass[sigconf]{acmart}
+\fi
+
+% --- USENIX venues (article + usenix style) ---
+\ifusenixvenue
+    \documentclass[letterpaper,twocolumn,10pt]{article}
+\fi
+
+% --- ML venues (article + conference style) ---
+\ifmlvenue
+    \documentclass{article}
+\fi
+
+
+% ============================================================
+% CONFERENCE-SPECIFIC STYLE PACKAGES
+% ============================================================
+
+% --- USENIX ---
+\ifusenixvenue
+    \usepackage{usenix-2020-09}
+\fi
+
+% --- MLSys ---
+% Options: accepted, final
+\ifx\targetconference\confmlsys
+    \usepackage[accepted]{mlsys2024}
+\fi
+
+% --- NeurIPS ---
+% Options: preprint, final, nonatbib
+\ifx\targetconference\confneurips
+    \usepackage[preprint]{neurips_2025}
+\fi
+
+% --- COLM ---
+% Options: final
+\ifx\targetconference\confcolm
+    \usepackage[final]{colm2025_conference}
+\fi
+
+
+% ============================================================
+% COMMON PACKAGES AND MACROS
+% ============================================================
+\input{packages}
+\input{macros}
+\InputIfFileExists{macros-project}{}{}
+
+
+% ============================================================
+% AUTHOR BLOCK HELPERS
+% Resolve institution fields and author names from config macros.
+% ============================================================
+\makeatletter
+\newcommand{\getinst}[1]{\csname inst#1\endcsname}
+\newcommand{\getinstcity}[1]{\csname inst#1city\endcsname}
+\newcommand{\getinstcountry}[1]{\csname inst#1country\endcsname}
+
+% Render superscript mark after author name (if mark is defined in config)
+% Uses \textsuperscript for ACM compatibility, $...$ for math symbols like \dagger.
+\newcommand{\authormark}[1]{%
+  \@ifundefined{author#1mark}{}{\textsuperscript{$\csname author#1mark\endcsname$}}%
+}
+% Author name with mark appended (for display contexts)
+\newcommand{\getname}[1]{\csname author#1name\endcsname\authormark{#1}}
+
+% Collect all defined author footnote texts into one block
+\newcommand{\renderauthorfn}{%
+  \ifdefined\authorfnA\authorfnA\fi
+  \ifdefined\authorfnB\quad\authorfnB\fi
+  \ifdefined\authorfnC\quad\authorfnC\fi
+  \ifdefined\authorfnD\quad\authorfnD\fi
+  \ifdefined\authorfnE\quad\authorfnE\fi
+}
+% Emit author footnotes as an unnumbered footnote (non-MLSys venues)
+\newcommand{\emitauthorfn}{%
+  \ifdefined\authorfnA
+    \begingroup\renewcommand{\thefootnote}{}\footnotetext{\renderauthorfn}\endgroup
+    \addtocounter{footnote}{-1}%
+  \fi
+}
+
+% --- Condensed author format helpers ---
+% Auto-number institutions: assigns 1,2,3... to each defined instX.
+\newcounter{instctr}
+\newcommand{\numberinst}[1]{%
+  \@ifundefined{inst#1}{}{%
+    \stepcounter{instctr}%
+    \expandafter\edef\csname instnum#1\endcsname{\arabic{instctr}}%
+  }%
+}
+\numberinst{A}\numberinst{B}\numberinst{C}\numberinst{D}\numberinst{E}
+\numberinst{F}\numberinst{G}\numberinst{H}\numberinst{I}\numberinst{J}
+
+% Render author name with superscript institution number + optional mark
+\newcommand{\authorwithnum}[1]{%
+  \csname author#1name\endcsname$^{\text{\csname instnum\csname author#1inst\endcsname\endcsname}}$\authormark{#1}%
+}
+% Render a single author entry with leading space (for non-first authors)
+\newcommand{\addauthor}[1]{%
+  \@ifundefined{author#1name}{}{\enskip\authorwithnum{#1}}%
+}
+
+% Condensed author list: all authors on 1-2 lines separated by \enskip
+\newcommand{\condensedauthorlist}{%
+  \authorwithnum{A}%
+  \addauthor{B}\addauthor{C}\addauthor{D}\addauthor{E}%
+  \addauthor{F}\addauthor{G}\addauthor{H}\addauthor{I}\addauthor{J}%
+}
+
+% Institution legend: ^1Institution1  ^2Institution2  ...
+\newcommand{\addinstlegend}[1]{%
+  \@ifundefined{inst#1}{}{%
+    \enskip$^{\text{\csname instnum#1\endcsname}}$\csname inst#1\endcsname%
+  }%
+}
+\newcommand{\instlegend}{%
+  \ifdefined\instA $^{\text{\instnumA}}$\instA\fi
+  \addinstlegend{B}\addinstlegend{C}\addinstlegend{D}\addinstlegend{E}%
+  \addinstlegend{F}\addinstlegend{G}\addinstlegend{H}\addinstlegend{I}\addinstlegend{J}%
+}
+\makeatother
+
+
+% ============================================================
+% ACM-SPECIFIC METADATA
+% ============================================================
+\ifacmvenue
+    \settopmatter{printfolios=false, printacmref=false}
+    \setcopyright{none}
+    \acmDOI{}
+    \acmISBN{}
+    % Fill in for camera-ready:
+    % \acmYear{2026}
+    % \acmConference[Conf'26]{Full Conference Name}{Month Year}{City, Country}
+\fi
+
+
+% ============================================================
+% TITLE AND AUTHORS
+% Auto-generated from config.tex metadata.
+% ============================================================
+
+% --- ACM venues (ASPLOS, SOSP, EuroSys, SoCC, VLDB, SIGMOD) ---
+\ifacmvenue
+    \title{\papertitle}
+    \renewcommand{\shortauthors}{\shortauthorlist}
+    \author{\condensedauthorlist}
+    \affiliation{\vspace{1mm}\instlegend \country{}}
+\fi
+
+% --- USENIX venues (OSDI, NSDI) ---
+\ifusenixvenue
+    \title{\papertitle}
+    \author{
+        \parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\condensedauthorlist} \\[0.3em]
+        {\normalsize\upshape\parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\instlegend}}
+    }
+\fi
+
+% --- NeurIPS, COLM, ICML, ICLR (condensed with numbered institutions) ---
+\ifmlvenue
+    \ifx\targetconference\confmlsys\else
+        \title{\papertitle}
+        \author{
+            \parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\condensedauthorlist} \\[0.5em]
+            {\normalfont\parbox{\dimexpr\textwidth-2\tabcolsep-8pt}{\centering\instlegend}}
+        }
+    \fi
+\fi
+
+% --- MLSys uses its own title/author macros (set inside \twocolumn) ---
+% MLSys title and authors are configured in the document body below.
+
+
+% ============================================================
+% DOCUMENT
+% ============================================================
+\begin{document}
+
+% --- ACM: abstract before maketitle ---
+\ifacmvenue
+    \begin{abstract}
+        \input{content/abstract}
+    \end{abstract}
+    \maketitle
+    \emitauthorfn
+    \keywords{\paperkeywords}
+\fi
+
+% --- USENIX: maketitle then abstract ---
+\ifusenixvenue
+    \maketitle
+    \emitauthorfn
+    \begin{abstract}
+        \input{content/abstract}
+    \end{abstract}
+\fi
+
+% --- MLSys: twocolumn header with title, authors, abstract ---
+\ifx\targetconference\confmlsys
+    \twocolumn[
+    \mlsystitle{\papertitle}
+    \mlsystitlerunning{\shorttitle}
+    \begin{mlsysauthorlist}
+        \mlsysauthor{\getname{A}}{aff\authorAinst}
+        \ifdefined\authorBname \mlsysauthor{\getname{B}}{aff\authorBinst} \fi
+        \ifdefined\authorCname \mlsysauthor{\getname{C}}{aff\authorCinst} \fi
+        \ifdefined\authorDname \mlsysauthor{\getname{D}}{aff\authorDinst} \fi
+        \ifdefined\authorEname \mlsysauthor{\getname{E}}{aff\authorEinst} \fi
+        \ifdefined\authorFname \mlsysauthor{\getname{F}}{aff\authorFinst} \fi
+        \ifdefined\authorGname \mlsysauthor{\getname{G}}{aff\authorGinst} \fi
+        \ifdefined\authorHname \mlsysauthor{\getname{H}}{aff\authorHinst} \fi
+        \ifdefined\authorIname \mlsysauthor{\getname{I}}{aff\authorIinst} \fi
+        \ifdefined\authorJname \mlsysauthor{\getname{J}}{aff\authorJinst} \fi
+    \end{mlsysauthorlist}
+    \ifdefined\instA \mlsysaffiliation{affA}{\instA} \fi
+    \ifdefined\instB \mlsysaffiliation{affB}{\instB} \fi
+    \ifdefined\instC \mlsysaffiliation{affC}{\instC} \fi
+    \ifdefined\instD \mlsysaffiliation{affD}{\instD} \fi
+    \ifdefined\instE \mlsysaffiliation{affE}{\instE} \fi
+    \ifdefined\instF \mlsysaffiliation{affF}{\instF} \fi
+    \ifdefined\instG \mlsysaffiliation{affG}{\instG} \fi
+    \ifdefined\instH \mlsysaffiliation{affH}{\instH} \fi
+    \ifdefined\instI \mlsysaffiliation{affI}{\instI} \fi
+    \ifdefined\instJ \mlsysaffiliation{affJ}{\instJ} \fi
+    \mlsyscorrespondingauthor{\authorAname}{\authorAemail}
+    \mlsyskeywords{\paperkeywords}
+    \vskip 0.3in
+    \begin{abstract}
+        \input{content/abstract}
+    \end{abstract}
+    ]
+    \printAffiliationsAndNotice{\renderauthorfn}
+\fi
+
+% --- NeurIPS, COLM, ICML, ICLR: maketitle then abstract ---
+\ifmlvenue
+    \ifx\targetconference\confmlsys\else
+        \maketitle
+        \emitauthorfn
+        \begin{abstract}
+            \input{content/abstract}
+        \end{abstract}
+    \fi
+\fi
+
+
+% ============================================================
+% MAIN CONTENT
+% ============================================================
+\input{content/1-intro}
+\input{content/2-background}
+\input{content/3-design}
+\input{content/4-eval}
+\input{content/5-related}
+\input{content/6-conc}
+
+% --- Acknowledgments (uncomment when ready) ---
+% \ifacmvenue
+%     \begin{acks}
+%         We thank ...
+%     \end{acks}
+% \else
+%     \section*{Acknowledgments}
+%     We thank ...
+% \fi
+
+
+% ============================================================
+% BIBLIOGRAPHY
+% ============================================================
+\ifx\targetconference\confasplos
+    \bibliographystyle{ACM-Reference-Format}
+\fi
+\ifx\targetconference\confsosp
+    \bibliographystyle{ACM-Reference-Format}
+\fi
+\ifx\targetconference\confeurosys
+    \bibliographystyle{plain}
+\fi
+\ifx\targetconference\confsocc
+    \bibliographystyle{ACM-Reference-Format}
+\fi
+\ifx\targetconference\confvldb
+    \bibliographystyle{ACM-Reference-Format}
+\fi
+\ifx\targetconference\confsigmod
+    \bibliographystyle{ACM-Reference-Format}
+\fi
+\ifusenixvenue
+    \bibliographystyle{plain}
+\fi
+\ifx\targetconference\confmlsys
+    \bibliographystyle{mlsys2024}
+\fi
+\ifx\targetconference\confneurips
+    \bibliographystyle{plainnat}
+\fi
+\ifx\targetconference\confcolm
+    \bibliographystyle{colm2025_conference}
+\fi
+
+{\small
+\bibliography{references}
+}
+
+
+% ============================================================
+% APPENDIX
+% ============================================================
+\newpage
+\appendix
+\input{content/appendix}
+
+\end{document}

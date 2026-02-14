@@ -1,0 +1,18 @@
+\begin{figure}
+\centering
+    \begin{subfigure}[b]{0.49\linewidth}
+        \includegraphics[width=\linewidth]{figures/experiments/cp_decode_scaling/cache_parallel_scaling_llama_7b.pdf}
+        \caption{\llamaS with $p_{spp}=4$.}
+        \label{fig:kvpresults:latency}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\linewidth}
+        \centering\includegraphics[width=0.8\linewidth]{figures/experiments/cp_prefill_scaling/cache_parallel_prefill_vs_batch_llama_7b.pdf}
+        \caption{TTFT vs. TPOT trade-off space.}
+        \label{fig:kvpresults:tradeoff}
+    \end{subfigure}
+    \caption{
+     (a)TPOT reduction with KVP in \sysname in decode-only batches. For 10M context length decodes for \llamaS, $p_{kvp} = 2$ results in almost 40\% reduction in latency, allowing decode at the rate of $\sim$30 tokens per second. (b) KVP enables co-batching of larger prefill chunks with decode requests by parallelizing attention computation, reducing prefill-decode latency interference and providing a richer tradeoff space.
+    }
+    \label{fig:kvpresults}
+    \end{figure}

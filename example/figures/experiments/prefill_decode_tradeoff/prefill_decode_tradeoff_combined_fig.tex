@@ -1,0 +1,27 @@
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.49\linewidth}        
+        \centering\includegraphics[width=\linewidth]{figures/experiments/prefill_decode_tradeoff/decode_vs_prefill_latency_tradeoff.pdf}
+        \caption{
+            Static chunk sizes.
+        }
+        \label{fig:prefilldecode:tradeoff}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\linewidth}
+        \centering\includegraphics[width=\linewidth]{figures/experiments/prefill_decode_tradeoff/fixed_vs_dynamic_pareto_curves.pdf}
+        \caption{
+            Adaptive chunk size.
+        }
+        \label{fig:prefilldecode:dynamictradeoff}
+    \end{subfigure}
+    % \caption{
+    %     \todo{Improve caption.}
+    %     Pareto frontier showing the latency trade-off varying the chunking policy.
+    % }
+    \caption{
+        Pareto frontiers of prefill/decode latencies in mixed batching with chunked prefills:
+        (a) Static sizes have a trade-off between prefill and decode latencies.
+        (b) Adaptive chunking starts with larger chunks, gradually reducing size to keep batch latencies consistent, achieving better prefill efficiency and low decode latency.
+    }
+    \label{fig:prefilldecode}
+\end{figure}

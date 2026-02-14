@@ -1,0 +1,59 @@
+\section{Motivation: The Case for Preemptive Long Context LLM Inference}
+\label{sec:challenges}
+
+In this section, we analyze how million-token LLM inferences create extreme computational heterogeneity due to quadratic attention complexity, causing convoy effects where long requests block shorter ones, motivating our preemptive inference approach.
+
+\subsection{Background: LLM Inference Characteristics}
+\label{sec:background-condensed}
+
+Auto-regressive LLM inference comprises two fundamentally different phases with distinct performance characteristics~\cite{sarathi2023,patel2023splitwise,distserve2024}. The \textbf{prefill phase} processes the entire prompt through a single forward pass to construct Key-Value (KV) cache and generate the first token. This phase is compute-bound, with performance measured by Time-to-First-Token (TTFT). The subsequent \textbf{decode phase} generates tokens autoregressively, one at a time, and is memory-bandwidth-bound. Its performance is measured by Time-Per-Output-Token (TPOT) or Time-Between-Tokens (TBT) \cite{etalon}.
+
+Contemporary serving systems employ two primary parallelism strategies.  \textbf{Tensor Parallelism (TP)}~\cite{megatron} partitions each model layer across multiple devices. This reduces per-device memory requirements and can improve latency. However, TP requires high communication bandwidth, limiting it to single servers with fast interconnects like NVLink. \textbf{Pipeline Parallelism (PP)}~\cite{gpipe, orca, sarathi2023} distributes complete layers sequentially across devices. While this reduces memory pressure per device and can improve throughput, it provides no latency benefit for individual requests due to its sequential execution model.
+
+\subsection{Context Length Scaling Limits of Conventional Parallelism Techniques}
+\label{sec:limits-conventional}
+
+\myparagraph{Memory Constraint} In the prefill phase, since all the input tokens are processed concurrently, the activation memory required for prefill computation increases linearly with the context length. While tensor parallelism can distribute this load across devices, it cannot be scaled beyond a single node due to communication overhead.
+
+\myparagraph{Latency Constraints} The quadratic complexity of attention operation becomes a major challenge for interactive workloads as sequence length grows. For instance, to process 1M tokens with \llamaL we require a total of 2.8 ExaFLOPs. On an H100 GPU, even at full utilization, this computation would require at least 48 minutes to execute. To perform this computation in a reasonable time, the attention computation needs to be parallelized across a large number of GPUs. However, neither tensor nor pipeline parallelism provides a viable solution. As discussed previously, TP does not scale beyond a single node (8 GPUs) due to communication overhead \cite{narayanan2021efficient, sarathi2023}, while PP can scale to a large number of GPUs, it does not provide any latency advantage.
+
+\begin{takeawaybox}
+\textit{\textbf{Takeaway:}} Standard parallelization techniques like TP or PP fail at million-token contexts due to memory limits and quadratic attention costs that lead to high latency.
+\end{takeawaybox}
+
+\subsection{Long-Context System Scaling with Context Parallelism}
+\label{sec:ring-attention-scaling}
+
+To overcome the memory and latency limitations of conventional parallelism, Liu et al. introduced \textbf{Context Parallelism (CP)} \cite{liu2023ring,brandon2023striped} for long-context \textit{training}. In CP, the input sequence is partitioned across multiple GPUs to alleviate activation memory pressure. By overlapping KV block communication between GPUs with computation, CP enables efficient scaling to hundreds of devices. This approach has been widely adopted in long-context training systems.
+
+However, context parallelism's design is fundamentally misaligned with the demands of inference serving. To achieve efficient overlap of communication and computation in CP, each GPU must process a sufficiently large sequence partition (e.g., 24.5K tokens on A100 with InfiniBand \cite{liu2023ring}). This creates a critical latency-throughput tradeoff --- a system configured with high parallelism degrees for low-latency serving of long context requests suffers from severe underutilization when serving short requests. Conversely, a system configured for short requests cannot achieve acceptable latency for long ones.
+
+\subsection{Adapting Context Parallelism for Inference}
+\label{sec:adapting-ring-attention}
+
+To address the rigid resource allocation in CP, the state-of-the-art system \ls \cite{2024loongserve} adapts it for inference by introducing two key mechanisms. First, it proposes an elastic version of context parallelism, where the degree of parallelism is dynamically adjusted to match the workload --- allocating more resources to accelerate long, compute-intensive prefills while using fewer for short requests, thereby improving efficiency.
+
+Second, because CP is ineffective for decode phases, the system must adopt the prefill-decode disaggregation paradigm \cite{patel2023splitwise, distserve2024}. In this model, the prefill and decode phases are handled by separate, isolated groups of GPUs. After a request's prefill is complete, its KV cache is migrated from the prefill pool to a different group of GPUs dedicated to the less resource-intensive decode phase. Furthermore, since the relative prefill to decode load ratio in the system dynamically changes based on the input requests pattern \cite{mitra2025beyond}, \ls adopts an elastic approach where the number of GPUs in the prefill/decode pool is dynamically adjusted to match the workload. This elastic, disaggregated architecture represents the current state-of-the-art approach for long-context inference --- achieving 3-5\myx \cite{2024loongserve} lower latency than prior systems like vLLM \cite{vllmsosp}, DistServe \cite{distserve2024}, and Sarathi-Serve \cite{agrawal2024taming}.
+
+
+\subsection{The Convoy Effect from Extreme Workload Heterogeneity}
+\label{sec:convoy-effect-heterogeneity}
+
+The key challenge in serving long-context models stems from the extreme workload heterogeneity created by the quadratic complexity of self-attention. Because the required FLOPs for the attention mechanism scale with the square of the sequence length ($N^2$), the difference in processing time between requests grows superlinearly. For instance, a 100K-token request is not 100\myx but roughly 10,000\myx more computationally expensive than a 1K-token request. This extreme heterogeneity, lead to a classic systems challenge known as the \textit{\textbf{convoy effect}}~\cite{ostep,dino}. When the system processes a long prefill, all subsequent short requests behind it in the queue are stalled. As shown in \Cref{fig:banner:bars}, this leads to a complete collapse in system performance, increasing median TTFT by 30\myx and tail latency by 174\myx with just 5\% long requests in the workload.
+
+\begin{takeawaybox}
+    \textit{\textbf{Takeaway:}} The quadratic cost of attention creates extreme workload heterogeneity, leading to the \textbf{\textit{convoy effect}}, where long requests block short ones.
+\end{takeawaybox}
+
+\subsection{The Path to Preemption: Fine-Grained Chunking}
+\label{sec:path-to-preemption}
+
+The convoy effect is a widely studied problem in operating systems --- resolving this issue requires a shift from non-preemptive to preemptive scheduling \cite{ostep,dino}. To apply this principle to LLM serving, the long, atomic prefill operation must be broken down into smaller, interruptible units of work. Chunking the input prompt \cite{agrawal2024taming} achieves exactly this, creating scheduling opportunities to interleave short requests with long ones.
+
+However, naive chunking is widely considered impractical for long contexts due to three prohibitive systems challenges, which this paper systematically resolves:
+
+\myparagraph{KV-Cache Read Amplification} In a standard, non-chunked prefill, the KV cache is read once. With chunking, however, the processing of each subsequent chunk requires re-reading the entire KV cache generated by all previous chunks from GPU memory. This transforms the memory access pattern from being linear with the sequence length to being quadratic. Because memory bandwidth is a critical and often limited resource, this quadratic increase in data movement has led to the widespread belief that chunking is fundamentally inefficient and unscalable for long-context serving \cite{distserve2024,sarathi2023}.
+
+\myparagraph{Latency Interference} Piggybacking prefill chunks \cite{agrawal2024taming} onto decode batches is a standard technique to improve GPU utilization and reduce tail latency by co-executing compute-bound prefill operations with memory-bound decode operations. However, with long contexts, the compute cost of successive prefill chunks grows quadratically as the context lengthens. Late-stage chunks become so computationally intensive that they stall latency-sensitive decodes, making it infeasible to batch prefill chunks with latency-sensitive decodes --- for instance, computing the a prefill chunk for a 1M context request with \llamaS on 8 H100s using chunk size of 512 results in decode latency of $\sim 250$ms, almost an order of magnitude higher the typical production SLOs.
+
+\myparagraph{Lack of a Preemption-Friendly Scaling Strategy} Adopting chunking means abandoning the only proven technique for scaling prefill latency -- context parallelism. While CP operates by splitting the sequence in a special dimension across different devices, chunked prefill unrolls the prefill computation in a temporal dimension by processing each prefill chunk sequentially. There is no trivial solution to combine the two approaches. The conventional alternatives are insufficient for serving long contexts. This creates the need for entirely new parallelism strategies designed to be both scalable and preemptive.

@@ -1,0 +1,188 @@
+\section{Scheduling Algorithms}
+\label{appendix:algorithms}
+
+This appendix presents the detailed algorithms used in \sysname's scheduling and batch packing mechanisms. We provide pseudocode for the adaptive batching process, chunk size selection, and prefill time estimation procedures.
+
+\subsection{Batch Formation and Packing}
+
+The batch formation process operates in two phases: first packing latency-sensitive decode requests, then filling remaining capacity with adaptively-chunked prefill requests. Algorithm~\ref{alg:batch-formation} presents the core batching logic.
+
+\begin{algorithm}[htbp]
+\caption{SLO-Aware Adaptive Batching}
+\label{alg:batch-formation}
+\begin{algorithmic}[1]
+\Require $\mathcal{Q}$: Queue of pending requests (prefill and decode)
+\Require $t_{target}$: Target batch execution time (e.g., 20ms from TPOT SLO)
+\Ensure $\mathcal{B}$: Batch of (request, num\_tokens) pairs
+\Procedure{FormNextBatch}{$\mathcal{Q}, t_{target}$}
+    \State $\mathcal{B} \gets \emptyset$ \Comment{Batch of (request, tokens) pairs}
+    \State $t_{pred} \gets 0$ \Comment{Predicted batch execution time}
+
+    \State \textbf{Phase 1: Pack decode requests}
+    \State $\mathcal{D} \gets$ GetDecodeRequests($\mathcal{Q}$)
+    \State $\mathcal{B} \gets \mathcal{B} \cup \mathcal{D}$
+    \State $t_{pred} \gets$ PredictTime($\mathcal{B}$)
+
+    \State \textbf{Phase 2: Fill with prefill chunks}
+    \State $\mathcal{P} \gets$ GetPrioritizedPrefills($\mathcal{Q}$) \Comment{LARS-ordered}
+    \While{$\mathcal{P} \neq \emptyset$ and $t_{pred} < t_{target}$}
+        \State $r \gets$ Pop($\mathcal{P}$)
+        \State $n \gets$ GetChunkSize($r, t_{pred}, t_{target}, \mathcal{B}$)
+        \If{$n > 0$}
+            \State $\mathcal{B} \gets \mathcal{B} \cup \{(r, n)\}$
+            \State $t_{pred} \gets$ PredictTime($\mathcal{B}$)
+        \Else
+            \State Requeue($r, \mathcal{P}$)
+        \EndIf
+    \EndWhile
+    \State \Return $\mathcal{B}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+The algorithm prioritizes decode requests to meet their strict TPOT requirements, then iteratively adds prefill chunks based on LARS priority ordering. The target batch time $t_{target}$ serves as a hard constraint derived from decode SLOs.
+
+\subsection{Adaptive Chunk Size Selection}
+
+The chunk size selection mechanism implements both the adaptive chunking policy and space-sharing optimization. Algorithm~\ref{alg:chunk-size} shows how chunk sizes are determined based on current batch composition and request urgency.
+
+\begin{algorithm}[h]
+\caption{Adaptive Chunk Size Selection}
+\label{alg:chunk-size}
+\begin{algorithmic}[1]
+\Require $r$: Prefill request with KV cache size $r.kv\_size$
+\Require $t_{current}$: Current predicted batch execution time
+\Require $t_{target}$: Target batch execution time limit
+\Require $\mathcal{B}$: Current batch composition
+\Require $\rho_{max}$: Maximum space-sharing fraction (e.g., 0.4)
+\Ensure Chunk size in tokens, or 0 if request cannot be scheduled
+\Procedure{GetChunkSize}{$r, t_{current}, t_{target}, \mathcal{B}$}
+    \State \textbf{Safety constraint:} Prevent multiple long prefills
+    \If{IsLong($r$) $\land$ ContainsLongPrefill($\mathcal{B}$)}
+        \State \Return 0
+    \EndIf
+
+    \State \textbf{Space sharing:} Long requests yield time for urgency
+    \State $\rho \gets$ GetRelativeSlack($r$) \Comment{$\rho = s(t) / w^{\text{total}}$}
+    \State $\rho \gets \min(\rho_{max}, \max(0, \rho))$ \Comment{Cap at max sharing}
+
+    \State \textbf{Calculate effective budget:}
+    \State $t_{effective} \gets t_{target} \cdot (1 - \rho)$
+    \State $t_{budget} \gets t_{effective} - t_{current}$
+
+    \If{$t_{budget} \leq 0$}
+        \State \Return 0
+    \EndIf
+
+    \State \textbf{Binary search for maximum chunk:}
+    \State \Return BinarySearchChunk($r, t_{budget}$)
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+The algorithm implements two key policies: (1) space-sharing where requests with high relative slack $\rho$ yield time to more urgent requests, and (2) finding the maximum chunk size that fits within the allocated time budget.
+
+\subsection{Prefill Time Estimation}
+
+Accurate estimation of remaining prefill time is crucial for LARS scheduling. We precompute a cache of prefill times for various sequence lengths, accounting for the adaptive chunking policy. Algorithm~\ref{alg:prefill-time} presents both the offline precomputation and runtime estimation procedures.
+
+\begin{algorithm}[htbp]
+\caption{Remaining Prefill Time Estimation}
+\label{alg:prefill-time}
+\begin{algorithmic}[1]
+\State \textbf{Offline Precomputation:}
+\Require $L_{max}$: Maximum sequence length to cache (e.g., 1M tokens)
+\Require $\Delta$: Granularity of cache entries (e.g., 1K tokens)
+\Ensure $\mathcal{C}$: Cache mapping sequence length to total prefill time
+\Procedure{BuildPrefillCache}{$L_{max}, \Delta$}
+    \State $\mathcal{C} \gets \{0 \mapsto 0\}$ \Comment{Cache: tokens $\rightarrow$ time}
+    \For{$\ell = \Delta$ to $L_{max}$ step $\Delta$}
+        \State $\mathcal{C}[\ell] \gets$ SimulatePrefill($\ell$)
+    \EndFor
+    \State \Return $\mathcal{C}$
+\EndProcedure
+
+\State
+\Require $L$: Total sequence length to simulate
+\Ensure Total time to prefill $L$ tokens with adaptive chunking
+\Procedure{SimulatePrefill}{$L$}
+    \State $t_{total} \gets 0$
+    \State $\ell_{processed} \gets 0$
+
+    \While{$\ell_{processed} < L$}
+        \State $kv_{size} \gets \ell_{processed}$ \Comment{Current KV cache size}
+        \State $(c, t_c) \gets$ GetOptimalChunk($kv_{size}, t_{target}$)
+        \If{$c = 0$}
+            \State \textbf{break}
+        \EndIf
+        \State $t_{total} \gets t_{total} + t_c$
+        \State $\ell_{processed} \gets \ell_{processed} + c$
+    \EndWhile
+    \State \Return $t_{total}$
+\EndProcedure
+
+\State
+\State \textbf{Runtime Estimation:}
+\Require $\ell_{total}$: Total tokens in the request
+\Require $\ell_{processed}$: Tokens already processed
+\Ensure Estimated time to complete remaining tokens
+\Procedure{GetRemainingTime}{$\ell_{total}, \ell_{processed}$}
+    \State $t_{total} \gets$ LookupCache($\mathcal{C}, \ell_{total}$)
+    \State $t_{done} \gets$ LookupCache($\mathcal{C}, \ell_{processed}$)
+    \State \Return $t_{total} - t_{done}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+The simulation accounts for how chunk sizes decrease as the KV cache grows, reflecting the shift from MLP-dominant to attention-dominant computation. The \textsc{SimulatePrefill} procedure uses the Vidur simulator~\cite{vidur} to model execution times accurately.
+
+\input{figures/experiments/mbu_mfu_scaling_fig_combined}
+
+
+\section{Scaling Properties of Parallelism Strategies}
+\label{appendix:scaling}
+
+This appendix provides detailed scaling analysis of \sysname's parallelism strategies: Stream Pipeline Parallelism (SPP) for prefill acceleration and KV-Cache Parallelism (KVP) for decode latency bounding.
+
+\subsection{Stream Pipeline Parallelism Scaling}
+
+
+\input{figures/experiments/pp_scaling/pp_scaling_ttft_combined}
+\input{figures/experiments/pp_scaling/pp_scaling_tbt_combined}
+
+
+\Cref{fig:sppscaling:ttft} demonstrates the scaling efficiency of Stream Pipeline Parallelism across different model sizes and sequence lengths. We evaluate \sysname 2D (SPP+TP) configurations against baseline approaches for long-context prefill processing.
+
+For Llama-3 8B (~\Cref{fig:sppscaling:ttft:sevenb}), \sysname achieves near-linear scaling up to 128 H100 GPUs. The efficiency remains above 70\% even at the highest parallelism degrees, demonstrating effective overlap of computation and communication. Notably, \sysname outperforms ring attention approaches by 60\% due to eliminating the sequential dependency bottleneck.
+
+Scaling to Llama-3 70B (~\Cref{fig:sppscaling:ttft:seventyb}) shows even stronger benefits. The larger model's increased compute density better amortizes pipeline startup costs, achieving 85\% scaling efficiency at SPP degree 8.
+
+\Cref{fig:sppscaling:tbt} examines the decode latency implications of SPP scaling. Due to it's communication efficient nature, SPP only marginally affects decode performance due to pipeline depth. With SPP degree 8, decode latency increases by only 16\%.
+
+
+\subsection{KV-Cache Parallelism Impact on Decode Performance}
+
+Figure~\ref{fig:kvpscaling:decode} shows KVP's effectiveness in bounding decode latency. For 10M-token contexts on Llama-3 8B, KVP with degree 4 reduces TPOT by 40\% in decode-only batches. The scaling is sub-linear due to communication overhead, but the latency reduction is crucial for meeting decode SLOs with long contexts.
+
+
+\subsection{TTFT-TPOT Trade-off Analysis}
+
+\input{figures/experiments/cp_prefill_scaling/cp_scaling_prefill_tfft_all_fig}
+
+We sweep the space of various chunk sizes for the chunked prefill, and also vary $p_{kvp}$, while keeping $p_{spp}=4$.
+\Cref{fig:kvpscaling:prefill:ttft} shows the results on \llamaS.
+For a given $p_{kvp}$, increasing the chunk size, reduces TTFT (prefill latency), since it requires fewer iterations.
+At the same time, it increases TBT, since each batched iteration takes longer to execute.
+Therefore, for sequence length 1M with $p_{kvp}=1$, the green line shows the left-most triangle at largest chunk size, and the right-most triangle at the smallest chunk size.
+For a given chunk size, increasing $p_{kvp}$ helps reduce both TTFT and TBT in most cases, thus helping reach more optimal points in this trade-off space.
+Indeed, lower $p_{kvp}$ achieves better TTFT latency in cases with lower arithmetic intensity (due to small chunk size), as exemplified by the right-most points for 1M context length. As we increase the arithmetic intensity (\eg{}, 2M context length), we see increasing $p_{kvp}$ achieving the same performance for the smallest chunk size, and, finally, decreasing TTFT for 4M context length.
+
+\subsection{Resource Utilization Efficiency}
+
+A key measure of \sysname{}'s effectiveness is its ability to maintain high throughput while scaling to large parallelism degrees.
+We evaluate this using hardware utilization metrics Model FLOPS Utilization (MFU) and Model Bandwidth Utilization (MBU)~\cite{chowdhery2023palm, llmperfblog}.
+In LLM inference, prefill phases are compute-bound while decode phases are memory-bound~\cite{patel2023polcapoweroversubscriptionllm,patel2023splitwise}.
+\Cref{fig:utilization:sppmfu} shows the MFU for \sysname{} in the prefill phase (2D SPP+TP), while \Cref{fig:utilization:kvpmbt} shows the MBU for the decode phase (2D KVP+TP).
+For \llamaL{}, we achieve 50--60\% MFU across configurations, improving for longer sequences.
+Even at the scale of 128 GPUs, we achieve over 50\% MFU.
+Examining MBU, \Cref{fig:utilization:kvpmbt} shows that \sysname{}'s KVP implementation achieves up to 92\% MBU in optimal configurations, allowing consistent decode performance even with extremely long contexts.

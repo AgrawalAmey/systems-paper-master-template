@@ -1,0 +1,20 @@
+\begin{figure*}[tbh]
+    \centering
+    \begin{subfigure}[b]{\linewidth}        
+        \centering
+        \includegraphics[width=0.87\linewidth]{figures/experiments/e2e/a100/a100_main_short_ttft_cdf.pdf}
+        \caption{For short-context workloads from ShareGPT4, \sysname{} maintains consistently low latency even at high QPS.}
+        \label{fig:e2e:a100:ttft:short}
+    \end{subfigure}
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=0.87\linewidth]{figures/experiments/e2e/a100/a100_main_long_ttft_cdf.pdf}
+        \caption{For ShareGPT4 with 5\% long requests, \sysname{} achieves up to 30\myx{} lower median TTFT, demonstrating effective mitigation of HOL blocking}
+        \label{fig:e2e:a100:ttft:long}
+    \end{subfigure}
+    % \caption{
+    %     TTFT with \sysname{} 2D parallelism (SPP + TP) ($p_{tp}=8$) for context length 1M to 10M, with a sweep of $p_{spp}$.
+    % }
+    \caption{TTFT latency distribution under varying load conditions for \llamaS{} on two servers with a total of 16 A100 GPUs.}
+    \label{fig:e2e:a100:ttft}
+\end{figure*}

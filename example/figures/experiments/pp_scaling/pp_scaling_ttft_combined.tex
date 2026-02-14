@@ -1,0 +1,24 @@
+\begin{figure*}[tbh]
+    \centering
+    \begin{subfigure}[b]{0.49\linewidth}        
+        \centering
+        \includegraphics[width=\textwidth]{figures/experiments/pp_scaling/llama_7b_pp_ttft_scaling.pdf}
+        \caption{\llamaS.}
+        \label{fig:sppscaling:ttft:sevenb}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.49\linewidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/experiments/pp_scaling/llama_70b_pp_ttft_scaling.pdf}
+        \caption{\llamaL.}
+        \label{fig:sppscaling:ttft:seventyb}
+    \end{subfigure}
+    % \caption{
+    %     TTFT with \sysname{} 2D parallelism (SPP + TP) ($p_{tp}=8$) for context length 1M to 10M, with a sweep of $p_{spp}$.
+    % }
+    \caption{
+    Scaling efficiency of \sysname{} 2D (SPP+TP) for long-context prefill processing.
+    %Across both \llamaS{} and 70B,
+    \sysname{} 2D reduces TTFT near-linearly (80\%+ scaling efficiency) as the SPP degree increases to operate with up to 128 H100 GPUs.
+    Red crosses are infeasible settings due to memory limitations.}
+    \label{fig:sppscaling:ttft}
+\end{figure*}

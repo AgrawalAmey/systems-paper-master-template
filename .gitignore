@@ -1,0 +1,39 @@
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.synctex(busy)
+*.toc
+*.lof
+*.lot
+*.loa
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+*.xdv
+
+# Output PDF
+*.pdf
+!samples/*.pdf
+!example/**/*.pdf
+
+# Editor and IDE files
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+.idea/
+
+# latexmk
+*.latexmk
+
+# Not distributed
+ref-projects/

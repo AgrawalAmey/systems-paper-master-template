@@ -1,0 +1,23 @@
+% \begin{figure*}[]
+%     \centering
+%     \includegraphics[width=0.85\linewidth]{figures/experiments/e2e/h100/h100_main_long_ttft_cdf_moneta.pdf}
+%     \caption{
+%         Impact of the parallelization strategy on TTFT distribution across different load points for \llamaL{} on 8 servers with a total of 64 H100 GPUs running ShareGPT4 with 5\% long requests.
+%         Both \sysname-2D (SPP+TP) and \sysname{}-3D (SPP+TP+KVP) maintain comparable TTFT performance but enable significantly better decode performance by distributing KV cache reads.
+%     }
+%     \label{fig:e2e:h100:ttft:long}
+% \end{figure*}
+
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=0.9\linewidth]{figures/experiments/e2e/h100/h100_main_long_ttft_cdf.pdf}
+    \caption{Prefill performance comparison of parallelization strategies for \llamaL{} on 8 64 H100 GPUs running ShareGPT4 with 5\% long requests.}
+    \label{fig:e2e:h100:ttft:long}
+\end{figure*}
+
+\begin{figure}[t!]
+        \centering
+        \includegraphics[width=0.9\linewidth]{figures/experiments/e2e/h100/h100_main_long_tpot_cdf.pdf}
+    \caption{\sysname{}-3D (SPP+TP+KVP) maintain comparable TTFT performance \sysname-2D (SPP+TP) and but enable 2\myx better decode performance by distributing KV cache reads and reducing prefill-decode interference.}
+    \label{fig:e2e:h100:tpot:long}
+\end{figure}

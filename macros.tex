@@ -1,0 +1,98 @@
+% ============================================================
+% COMMON MACROS
+% Project-wide commands, abbreviations, and author comments.
+% ============================================================
+
+% --- System Name ---
+% Derived from \sysnameplain in config.tex.
+\newcommand{\sysname}{\textsc{\sysnameplain}\xspace}
+
+% --- Standard Abbreviations ---
+\newcommand{\ie}{\textit{i.e.,}\xspace}
+\newcommand{\eg}{\textit{e.g.,}\xspace}
+\newcommand{\etal}{\textit{et al.}\xspace}
+\newcommand{\etc}{\textit{etc.}\xspace}
+\newcommand{\wrt}{w.r.t.\xspace}
+\newcommand{\aka}{a.k.a.\xspace}
+\newcommand{\cf}{{cf.}\xspace}
+
+% --- Section References ---
+\newcommand{\sref}[1]{\S\ref{#1}}
+\newcommand{\figref}[1]{Figure~\ref{#1}}
+\newcommand{\tabref}[1]{Table~\ref{#1}}
+\providecommand{\algref}[1]{Algorithm~\ref{#1}}
+\newcommand{\eqnref}[1]{Eq.~\ref{#1}}
+
+% --- Formatting Helpers ---
+\newcommand{\vheading}[1]{\vspace{4pt}\noindent\textbf{#1.}\xspace}
+\newcommand{\heading}[1]{\noindent\textbf{#1.}\xspace}
+\newcommand{\myparagraph}[1]{\vspace{\smallskipamount}\noindent\textbf{#1.\xspace}}
+\newcommand{\mycaption}[2]{\caption{\textbf{#1.} {#2}}}
+\newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
+
+% --- Math Operators ---
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+% --- Table Symbols ---
+\newcommand{\greencheck}{\textcolor{ForestGreen}{\checkmark}\xspace}
+\newcommand{\redcross}{\textcolor{red}{$\times$}\xspace}
+\newcommand{\myx}{$\times$\xspace}
+\newcommand{\greenup}{\textcolor{ForestGreen}{\textbf{$\uparrow$}}\xspace}
+\newcommand{\reddown}{\textcolor{red}{\textbf{$\downarrow$}}\xspace}
+\newcommand{\rot}[1]{\rotatebox{90}{#1}}
+
+% --- Figure Part Labels ---
+\newcommand{\figleft}{{\em (Left)}\xspace}
+\newcommand{\figright}{{\em (Right)}\xspace}
+\newcommand{\figtop}{{\em (Top)}\xspace}
+\newcommand{\figbottom}{{\em (Bottom)}\xspace}
+
+% --- Compact Lists (for tight spaces) ---
+\newcommand{\squishlist}{\begin{itemize}[leftmargin=*,noitemsep,topsep=0pt]}
+\newcommand{\squishend}{\end{itemize}}
+
+% --- Callout / Insight Boxes ---
+% Usage: \begin{insightbox} ... \end{insightbox}
+\newenvironment{insightbox}{%
+    \def\FrameCommand{\fboxrule=0.8pt \fboxsep=4pt \fcolorbox{black!60}{black!3}}%
+    \MakeFramed{\advance\hsize-\width \FrameRestore}%
+}{\endMakeFramed}
+
+% Usage: \begin{takeawaybox} ... \end{takeawaybox}
+\newenvironment{takeawaybox}{%
+    \def\FrameCommand{\fboxrule=1pt \fboxsep=4pt \fcolorbox{black}{black!5}}%
+    \MakeFramed{\advance\hsize-\width \FrameRestore}%
+}{\endMakeFramed}
+
+% --- Circled Numbers ---
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{%
+    \node[shape=circle,fill,minimum size=0.3cm,inner sep=0.5pt] (char) {\textcolor{white}{#1}};}}
+
+% ============================================================
+% AUTHOR COMMENTS
+% Colored margin notes for collaborative drafting.
+% Hidden when \publicversiontrue is set in config.tex.
+% ============================================================
+\ifpublicversion
+    % --- Production mode: suppress all comments ---
+    \newcommand{\grumbler}[3]{}
+    \newcommand{\authorA}[1]{}
+    \newcommand{\authorB}[1]{}
+    \newcommand{\authorC}[1]{}
+    \newcommand{\authorD}[1]{}
+    \newcommand{\authorE}[1]{}
+    \newcommand{\todo}[1]{}
+\else
+    % --- Drafting mode: show colored inline comments ---
+    \newcommand{\grumbler}[3]{\xspace{\textcolor{#3}{\sf\bfseries\small [#1: #2]}}\xspace}
+    %
+    % Rename these to your co-authors:
+    %   \authorA{comment} -> [Alice: comment] in teal
+    \newcommand{\authorA}[1]{\grumbler{Alice}{#1}{teal}}
+    \newcommand{\authorB}[1]{\grumbler{Bob}{#1}{purple}}
+    \newcommand{\authorC}[1]{\grumbler{Carol}{#1}{orange}}
+    \newcommand{\authorD}[1]{\grumbler{Dave}{#1}{brown}}
+    \newcommand{\authorE}[1]{\grumbler{Eve}{#1}{olive}}
+    \newcommand{\todo}[1]{\grumbler{TODO}{#1}{red}}
+\fi

@@ -1,0 +1,32 @@
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{\linewidth}        
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/experiments/e2e/a100/a100_main_small_tpot_cdf.pdf}
+        \caption{ShareGPT4.}
+        \label{fig:e2e:a100:tpot:short}
+    \end{subfigure}
+    \begin{subfigure}[b]{\linewidth}
+        \centering
+        \includegraphics[width=0.9\textwidth]{figures/experiments/e2e/a100/a100_main_long_tpot_cdf.pdf}
+        \caption{ShareGPT4 with 5\% long requests.}
+        \label{fig:e2e:a100:tpot:long}
+    \end{subfigure}
+    % \caption{
+    %     TTFT with \sysname{} 2D parallelism (SPP + TP) ($p_{tp}=8$) for context length 1M to 10M, with a sweep of $p_{spp}$.
+    % }
+    \caption{Decode latency for \llamaS{} on 16 A100s.
+    Due to adaptive chunking, \sysname{} maintains low decode latency while other chunked prefill-based systems suffer from high latency.}
+    \label{fig:e2e:a100:tpot}
+\end{figure}
+
+% \begin{figure}[t!]        
+%     \centering
+%     \includegraphics[width=0.9\linewidth, trim=0 18em 0 0, clip]{figures/experiments/e2e/a100/a100_main_small_tpot_cdf_moneta.pdf}
+
+% \includegraphics[width=0.9\linewidth]{figures/experiments/e2e/a100/a100_main_long_tpot_cdf.pdf}
+
+%     \caption{Decode latency for \llamaS{} on 16 A100s (5\% long requests).
+%     Due to adaptive chunking, \sysname{} maintains low decode latency while other chunked prefill-based systems suffer from high latency.}
+%     \label{fig:e2e:a100:tpot}
+% \end{figure}

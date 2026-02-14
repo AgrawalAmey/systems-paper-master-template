@@ -1,0 +1,71 @@
+% \begin{figure*}
+%     \centering
+%     \begin{subfigure}[b]{0.75\linewidth}        
+%         \centering
+%         \includegraphics[width=\textwidth]{figures/experiments/pp_scaling/llama_7b_pp_tbt_scaling.pdf}
+%         \caption{Llama2 7B}
+%         \label{fig:sppscaling:tbt:sevenb}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{\linewidth}
+%         \centering
+%         \includegraphics[width=0.75\textwidth]{figures/experiments/pp_scaling/llama_70b_pp_tbt_scaling.pdf}
+%         \caption{Llama2 70B}
+%         \label{fig:sppscaling:tbt:seventyb}
+%     \end{subfigure}
+%     \caption{
+%         \todo{Improve caption.}
+%         TBT increasing the number of tokens from 1 million to 10 million changing the pipeline parallelism for SPP.
+%         \esha{We only need 1 example of this -- not 8 subplots. keep the 2M context example for \llamaS }
+%     }
+%     \label{fig:sppscaling:tbt}
+% \end{figure*}
+
+\begin{figure*}[ht]
+    %\centering
+    \begin{minipage}[t]{0.39\textwidth}
+    \begin{subfigure}[b]{0.45\linewidth}      
+        \centering
+        \includegraphics[width=\linewidth]{figures/experiments/pp_scaling/llama_7b_pp_tbt_scaling.pdf}
+        \caption{\llamaS}
+        \label{fig:sppscaling:tbt:sevenb}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/experiments/pp_scaling/llama_70b_pp_tbt_scaling.pdf}
+        \caption{\llamaL}
+        \label{fig:sppscaling:tbt:seventyb}
+    \end{subfigure}
+    % \caption{
+    %     TBT with \sysname{} 2D parallelism (SPP+TP), where $p_{tp}=8$ and $p_{spp}$ varies for 2M context.
+    % }
+    \caption{
+        Impact of SPP scaling on decode latency in \sysname{} 2D (SPP+TP, $p_{tp}=8$).
+        Decode latency is only marginally affected even with a 16-stage pipeline.
+    }
+    \label{fig:sppscaling:tbt}
+    \end{minipage}
+    \hspace{0.5em}
+    \begin{minipage}[t]{0.58\textwidth}
+    \centering
+    \begin{subfigure}[b]{0.49\linewidth}
+        \includegraphics[width=\linewidth]{figures/experiments/cp_decode_scaling/cache_parallel_scaling_llama_7b.pdf}
+        \caption{\llamaS with $p_{spp}=4$.}
+        \label{fig:kvpscaling:decode:sevenb}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\linewidth}
+        \includegraphics[width=\linewidth]{figures/experiments/cp_decode_scaling/cache_parallel_scaling_llama_70b.pdf}
+        \caption{\llamaL with $p_{spp}=8$.}
+        \label{fig:kvpscaling:decode:seventyb}
+    \end{subfigure}
+    % \caption{
+    %     TBT with only-decode batches on \sysname{} 3D parallelism. \amey{spp instead of pp on x axis}
+    %     \inigo{With only-decode batches? What does this mean? You are processing 4M/10M sequences, no? Is it that you run the prefill phase and this is the decode after that for that context?}\amey{yes, this is independent analysis of decode only batches to show the general decode efficacy.}
+    % }
+    \caption{
+     TPOT reduction with KVP in \sysname 3D in decode-only batches.
+     For 10M context length decodes for \llamaS, $p_{kvp} = 2$ results in almost 40\% reduction in latency, allowing decode at the rate of $\sim$30 tokens per second.
+    }
+    \label{fig:kvpscaling:decode}
+    \end{minipage}
+\end{figure*}

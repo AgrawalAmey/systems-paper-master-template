@@ -1,0 +1,4 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+This work demonstrates that the convoy effect, long understood in operating systems, is a critical but overlooked challenge in long-context LLM serving. Traditional non-preemptive systems fail to tackle the extreme heterogeneity caused by the quadratic attention cost, as a result a single long request can drastically degrade service for hundreds of short queries. Our results show that, that with careful co-design of parallelism strategies and scheduling policies preemption can be both practical and effective. As context windows of state-of-the-art LLMs continues to grow, the heterogeneity problem will only intensify, making preemptive scheduling a requirement rather than an optimization. \sysname{} shows that with careful system design, we can effectively serve long-context LLM workloads at scale.

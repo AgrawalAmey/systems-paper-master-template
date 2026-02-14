@@ -1,0 +1,42 @@
+% \begin{figure}
+%     \centering
+%     \begin{subfigure}[b]{0.4\textwidth}        
+%         \includegraphics[width=\textwidth]{figures/parallel_strats/pp_sched.pdf}
+%         \caption{
+%             Pipeline parallelism (PP).
+%         }
+%         \label{fig:sppsched:pp}
+%     \end{subfigure}
+%     \begin{subfigure}[b]{0.4\textwidth}
+%         \includegraphics[width=\textwidth]{figures/parallel_strats/spp_sched.pdf}
+%         \caption{
+%             Sequence pipeline parallelism (SPP).
+%         }
+%         \label{fig:sppsched:spp}
+%     \end{subfigure}
+%     \caption{
+%         \esha{use two GPUs to make this smaller}
+%         Contrasting pipeline parallelism strategies for prefill processing.
+%         (a) Standard PP uses micro-batches to improve throughput but does not reduce latency for long contexts.
+%         (b) SPP overlaps chunk processing across stages, significantly reducing prefill latency for long contexts while maintaining high GPU utilization.
+%     }
+%     \label{fig:sppsched}
+% \end{figure}
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.45\linewidth}
+    \centering
+    \includegraphics[width=0.85\linewidth]{figures/parallel_strats/pp_sched_vert.pdf}
+    \caption{Contrasting PP strategies for prefill processing.}
+    \label{fig:sppcombined:sched}    
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/experiments/spp_stripe/spp_vs_strip_seq1024K_llama_7b_medha.pdf}
+    \caption{Performance comparison of Context Parallelism vs SPP+TP.}
+    \label{fig:sppcombined:scaling}    
+    \end{subfigure}
+    \caption{Microbatched pipeline parallelism interleaves micro-batches composed of prefills from different requests ($R1$, $R2$) to improve throughput. SPP on the other hand, overlaps chunks of the same request ($R1_1$, $R2_2$) across stages to accelerate prefill processing. SPP achieves better scaling compared to CP due to lower communication overhead, resulting in up to 1.64\myx lower prefill latency for 1M context processing for \llamaS with H100s.}
+    \label{fig:sppcombined}    
+\end{figure}

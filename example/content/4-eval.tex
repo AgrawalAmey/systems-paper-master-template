@@ -1,0 +1,137 @@
+\section{Evaluation}
+\label{sec:eval}
+
+\vspace{-0.1em}
+
+\subsection{Evaluation Setup}
+
+\input{figures/experiments/e2e/a100/a100_e2e_ttft_fig}
+\input{figures/experiments/e2e/a100/a100_e2e_tbt_fig}
+
+
+\myparagraph{Baselines}
+We compare our system against the \sota{} long-context LLM inference serving systems, \ls{} \cite{2024loongserve} and vLLM \cite{vllmsosp}.
+Note that, for context lengths greater than 32K, vLLM defaults to the  Sarathi-Serve scheduler \cite{agrawal2024taming}.
+Thus, we refer to this baseline as Sarathi.
+We consider two chunk sizes for the Sarathi scheduler: 512 and 2048. We also consider DistServe \cite{distserve2024} and SplitWise \cite{patel2023splitwise}, however, these systems run out of memory due to activation memory bottleneck as discussed in \Cref{sec:limits-conventional}. To our knowledge, there are no publicly available systems that directly tackle convoy effects in long context inference. Finally, we evaluate \sysname{} variant that replaces the LARS request prioritization and multi-prefill batching with standard FCFS/EDF/LRS scheduling while retaining all other proposed mechanisms.
+
+\myparagraph{Models and datasets}
+We use \llamaS{} and \llamaL{} with RoPE~\cite{su2024roformer} scaling to support up to 10M tokens.
+Currently, there are no publicly available long-context LLM datasets available that span millions of tokens.
+Previous systems use L-Eval~\cite{leval} and LV-Eval~\cite{lveval} for long context evaluations. These datasets were created to evaluate long-context abilities of LLMs and predominantly contain short form question, with extremely small decode lengths. For instance, the median output length in L-Eval is 47 tokens as opposed to 415 in ShareGPT4 ~\cite{wang2023openchat} --- which is based on actual real-world user interactions with GPT4.
+
+To perform more realistic evaluations, we construct the \textbf{\emph{\sysname{}-SWE}} trace using the Gemini-Flash-1.5B model~\cite{team2024gemini}, inspired by LLM-enabled software engineering tools that have recently gained popularity.
+We focus on two common engineering tasks: code review for pull requests and GitHub issue resolution.
+From the top 1,000 most-starred GitHub repositories with permissive licenses (Apache or MIT), we select those with token counts between 100K and 1M.
+We extract the 100 most recent issues and merged PRs per repo and prompt Gemini to solve them referencing the codebase.
+
+This yields interactions with prefill lengths of 393K (P50) and 839K (P90) tokens and decode lengths of 518 (P50) and 808 (P90).
+To simulate a realistic request mix, we combine these long-context examples with the ShareGPT4 trace~\cite{wang2023openchat}, which consists of real GPT-4 conversations capped at 8K tokens.
+We test \sysname{} under various ratios of long and short-context requests.
+
+
+\myparagraph{Hardware}
+We evaluate \sysname across two hardware setups.
+For the \llamaS{} model, we use a setup with two DGX-A100 servers~\cite{a100azure}.
+While for \llamaL{}, we use a 128-GPU cluster with 16 DGX-H100 servers~\cite{h100azure}.
+In both setups, each server has 8 GPUs with 80GB of high bandwidth memory.
+The GPUs within a server are connected with NVLINK.
+Cross-server connection is via InfiniBand.
+
+
+\input{figures/experiments/e2e/h100/h100_e2e_ttft_fig}
+\input{figures/experiments/e2e/h100/h100_e2e_tbt_fig}
+
+\subsection{Capacity Evaluation}
+\label{sec:eval:cap}
+We begin by evaluating how \sysname{} performs under varying loads compared to existing approaches for \llamaS{} model on the A100 cluster.
+Our capacity evaluation focuses on two key metrics: TTFT and TPOT, as these directly impact user experience in interactive scenarios.
+
+To evaluate capacity systematically, we designed two workload scenarios:
+(1) a baseline with only short-context requests (\ie{}, ShareGPT4) and
+(2) a mixed workload containing 5\% long-context requests (128K--1M tokens).
+We vary the system load from 0.25 to 1.75 queries per second (QPS) and compare \sysname{} against \ls{} (TP-2, CP-4) and Sarathi (TP-8, PP-2).
+For fairness, we configure \sysname{} with similar configuration (TP-8, SPP-2).
+
+\myparagraph{Baseline Performance}
+In the scenario with only short requests (\Cref{fig:e2e:a100:ttft:short}), all systems exhibit comparable performance at low loads (0.25 QPS).
+However, as load increases, \ls{}'s performance degrades considerably, which we attribute to resource fragmentation.
+At 1.75 QPS, \ls{}'s P90 TTFT increases dramatically, while \sysname{} maintains consistent latency. Furthermore, \sysname achieves considerably better latency compared to Sarathi due to \sysname's SPP, which helps reduce TTFT.
+
+\myparagraph{Long Query Performance}
+\Cref{fig:e2e:a100:ttft:long} shows significant benefits for \sysname{} with long-context requests.
+At 0.75 QPS, \sysname{} achieves a 30\myx median TTFT improvement over \ls{}.
+Sarathi and \sysname{}-FCFS quickly degrade due to the convoy effect.
+Even at 1.25 QPS, \sysname{} maintains acceptable TTFT latencies, offering ~5\myx{} higher effective capacity than the baselines.
+Some baseline systems fail to complete requests within the 60-minute profiling window due to convoy effect, resulting in truncated CDFs.
+
+\myparagraph{Decode Performance}
+\Cref{fig:e2e:a100:tpot} shows that \ls{} experiences ~5\myx{} higher TPOT latencies than \sysname{}, even at high loads without long requests, due to resource fragmentation.
+With long requests, \sysname{} achieves comparable or better TPOT while processing significantly more requests with an order of magnitude lower TTFT.
+Even Sarathi, optimized for low decode latency, reaches TPOTs as high as 1 second due to its static chunking approach, which increases costs for processing later chunks in long sequences.
+In contrast, \sysname{}'s adaptive chunking maintains consistent performance across varying sequence lengths.
+
+
+\subsection{3D Parallel Performance}
+
+With \sysname{}'s baseline established, we evaluate 3D parallelism that combines tensor, stream pipeline and KV parallelism. For this experiment we use \llamaL{} on a H100 cluster.
+We compare two setups with equal resource budgets:
+(1) a 2D configuration (SPP-8) and
+(2) a 3D configuration (SPP-4, KVP-2), both using TP8.
+We run a mixed workload, including 5\% long-context (2M token) requests, scaled from the \sysname{}-SWE trace.
+
+
+\Cref{fig:e2e:h100:ttft:long} shows TTFT distributions under varying loads.
+At lower request rates (0.25 and 0.75 QPS), both configurations perform similarly, with nearly identical CDF curves.
+At higher loads (1.25 and 1.75 QPS), a trade-off emerges:
+the 3D parallel setup offers slightly lower peak throughput due to the higher SPP degree in the 2D case, which is more communication-efficient than KVP and better accelerates prefill.
+Despite this, both configurations maintain similar median latencies.
+
+\Cref{fig:e2e:h100:tpot:long} shows the strength of 3D parallel in the decode phase.
+At high load (1.75 QPS), the 3D setup reduces TPOT by over 2\myx{} at both P50 and P90.
+Even small prefill chunks can delay co-batched decode requests, especially with 2M-token sequences and large models.
+KVP mitigates this by distributing KV cache reads, reducing decode latency.
+
+This confirms a core design goal of \sysname{}'s 3D parallelism:
+balancing prefill throughput with decode responsiveness.
+While the 2D setup favors prefill speed, 3D parallelism delivers more consistent end-to-end latency---critical for real-world deployments.
+It retains the benefits of SPP while combining the strengths of both approaches.
+
+
+\input{figures/experiments/sched_abl/scheduler_abl_figure}
+
+
+
+\subsection{Effectiveness of \sysname{} Scheduler}
+\label{sec:eval:sched}
+
+
+We isolate the performance gains from \sysname{}'s scheduling policies by comparing it to traditional scheduling policies.
+\Cref{fig:abl:sched} shows the TTFT distributions for four approaches:
+FCFS, EDF, LARS (without multi-prefill batching), and \sysname{}'s scheduler with all optimizations enabled.
+The evaluation uses \llamaS{} on A100 GPUs in TP8-SPP2 configuration with a mixed workload of 5\% long-context requests.
+
+At low load (0.25 QPS), all policies show similar median latency but differ in tail behavior.
+However, at high load (1.75 QPS), the differences become more pronounced.
+FCFS performs poorly due to unmitigated convoy effect from long requests.
+Despite its success in latency-sensitive systems, EDF struggles here.
+While effective at low loads, EDF's performance degrades at higher loads, resembling FCFS behavior.
+This occurs because EDF defers long requests until their deadlines become unfeasible, causing them gain highest priority once they pass their deadlines as discussed in \Cref{sec:prioritization}.
+
+We also compare \sysname{} with multi-prefill batching to vanilla LARS. While both of these setups significantly outperform the FCFS and EDF baselines by mitigating convoy effect, we up to 1.8\myx lower median latency with \sysname{} compared to the vanialla LARS setup due to more effective GPU utilization enabled by multi-prefill batching.
+
+\myparagraph{Sensitivity to Long Request Mix}
+Figure~\ref{fig:banner:bars} shows how TTFT degrades as the fraction of long requests increases from 0\% to 5\%.
+The baseline system exhibits superlinear degradation --- even with 1\% long requests \ls shows 8\myx higher latency, while at 5\% it exhibits 30\myx P50 and 174\myx P90 higher latency due to convoy effect.
+In contrast, \sysname gracefully maintains the P90 latency under 10 seconds even with 5\% long request mix.
+
+\subsection{Alternate Scheduling Approaches: Multiuple Request Pools}
+A common industry technique to tackle with heterogeneity when serving models with moderate context lengths (64-128K) is to create separate pools for short and long requests.
+While \ls{} dynamically creates similar pools based on prefill lengths, it does not guarantee the availability of dedicated resources for all short requests.
+To evaluate the effectiveness of this approach, we implement a version of \ls{} with a \emph{reserved pool} specifically for short request processing, as shown in \Cref{fig:experiments:longservepp}.
+
+We compare \sysname{} to this baseline using the same setup as \Cref{sec:eval:cap}, reserving two of eight CP instances for short requests (<8192 tokens) and the rest for long requests.
+Each pool uses the standard \ls{} scheduler.
+This reservation increases contention for long prefills, leading to up to 20\% lower completions for long requests  compared to \sysname{}, and 10\% lower than default \ls{}. For the decodes, \ls with reservation achieves slightly lower TPOT compared to \ls as an artifact of overall lower ingestion (prefill) rate. \sysname consistently achieve lower decode latency compared to be both the variants of \ls. Thus, creating separate pools for requests of different length does not solve the fundamental problem of convoy effect while hurting throughput due to fragmentaion.
+
+\input{figures/experiments/longservepp/longservepp_comparison_fig}

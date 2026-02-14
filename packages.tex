@@ -1,0 +1,116 @@
+% ============================================================
+% COMMON PACKAGES
+% Safe to load with all supported conference styles.
+% ============================================================
+
+% --- Typography & Encoding ---
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+
+% --- Math ---
+\usepackage{amsmath}
+% Guard: avoid \Bbbk conflict with acmart font packages
+\ifdefined\Bbbk\let\Bbbk\relax\fi
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+% --- Figures & Graphics ---
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+
+% --- Tables ---
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{makecell}
+
+% --- Lists ---
+\usepackage{enumitem}
+
+% --- Colors ---
+\usepackage[dvipsnames,table]{xcolor}
+
+% --- Algorithms ---
+% Guard: some conference styles (e.g., mlsys) pre-load algorithm/algorithmic.
+% When algorithmic is pre-loaded, provide algpseudocode-compatible shims.
+\makeatletter
+\@ifpackageloaded{algorithmic}{%
+    % Compatibility: map algpseudocode mixed-case commands to algorithmic ALL CAPS
+    \providecommand{\Require}{\REQUIRE}
+    \providecommand{\Ensure}{\ENSURE}
+    \providecommand{\State}{\STATE}
+    \providecommand{\Return}{\RETURN}
+    \providecommand{\If}[1]{\IF{#1}}
+    \providecommand{\ElsIf}[1]{\ELSIF{#1}}
+    \providecommand{\Else}{\ELSE}
+    \providecommand{\EndIf}{\ENDIF}
+    \providecommand{\While}[1]{\WHILE{#1}}
+    \providecommand{\EndWhile}{\ENDWHILE}
+    \providecommand{\For}[1]{\FOR{#1}}
+    \providecommand{\EndFor}{\ENDFOR}
+    \providecommand{\Procedure}[2]{\textbf{procedure} \textsc{#1}(#2)}
+    \providecommand{\EndProcedure}{\textbf{end procedure}}
+    \providecommand{\Comment}[1]{\COMMENT{#1}}
+}{%
+    \usepackage{algorithm}
+    \usepackage{algpseudocode}
+}
+\makeatother
+
+% --- Code Listings ---
+\usepackage{listings}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\lstdefinestyle{default}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    basicstyle=\ttfamily\footnotesize,
+    breaklines=true,
+    frame=single,
+}
+\lstset{style=default}
+
+% --- Utilities ---
+\usepackage{xspace}
+\usepackage{ifthen}
+\usepackage{comment}
+% --- Callout Boxes ---
+\usepackage{framed}
+
+% --- References (load last) ---
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{cleveref}
+
+% --- Hyperref Configuration ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor={blue!60!black},
+    citecolor={red!60!black},
+    urlcolor={blue!80!black},
+    bookmarksnumbered=true,
+}
+
+% ============================================================
+% SPACE-SAVING DEFAULTS (common for page-limited venues)
+% Adjust or comment out as needed.
+% ============================================================
+\setlength{\intextsep}{5pt plus 2pt minus 2pt}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlist[itemize]{noitemsep, topsep=2pt, parsep=1pt}
+\setlist[enumerate]{noitemsep, topsep=2pt, parsep=1pt}
+
+% Prevent orphans and widows
+\widowpenalty=10000
+\clubpenalty=10000

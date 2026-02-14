@@ -1,0 +1,32 @@
+% ============================================================
+% PROJECT-SPECIFIC MACROS (Medha)
+% This file is auto-loaded by main.tex via \InputIfFileExists.
+% ============================================================
+
+% --- LLM Inference Terms ---
+\newcommand{\llamaL}{Llama-3 70B\xspace}
+\newcommand{\llamaS}{Llama-3 8B\xspace}
+\newcommand{\ls}{LoongServe\xspace}
+\newcommand{\sota}{state-of-the-art\xspace}
+\newcommand{\slo}{SLO\xspace}
+\newcommand{\slos}{SLOs\xspace}
+
+% --- Named Author Comments ---
+% These extend the generic \authorA..\authorE with project-specific names.
+\ifpublicversion
+    \newcommand{\amey}[1]{}
+    \newcommand{\esha}[1]{}
+    \newcommand{\hq}[1]{}
+    \newcommand{\inigo}[1]{}
+    \newcommand{\alexey}[1]{}
+    \newcommand{\junda}[1]{}
+    \newcommand{\rr}[1]{}
+\else
+    \newcommand{\amey}[1]{\grumbler{Amey}{#1}{teal}}
+    \newcommand{\esha}[1]{\grumbler{Esha}{#1}{brown}}
+    \newcommand{\hq}[1]{\grumbler{HQ}{#1}{cyan}}
+    \newcommand{\inigo}[1]{\grumbler{Inigo}{#1}{violet}}
+    \newcommand{\alexey}[1]{\grumbler{AT}{#1}{blue}}
+    \newcommand{\junda}[1]{\grumbler{Junda}{#1}{violet}}
+    \newcommand{\rr}[1]{\grumbler{Ram}{#1}{cyan}}
+\fi

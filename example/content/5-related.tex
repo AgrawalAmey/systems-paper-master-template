@@ -1,0 +1,14 @@
+\section{Related Work}
+\label{section:relatedwork}
+
+\myparagraph{LLMs for long context}
+Recent research has focused on effectively training and serving long-context LLM models. Some propose new attention parallelism techniques as more efficient solutions to enable long context~\cite{2021sequence, liu2023ring,brandon2023striped}.
+We discuss and compare them in detail in \Cref{sec:background-condensed,sec:eval}.
+A similar idea to SPP, called token-parallelism, was used in TeraPipe~\cite{terapipe} to parallelize the different micro-batches of a mini-batch along the token dimension in order to reduce pipeline bubbles and improve throughput during training. Recently, Mooncake \cite{mooncake} --Kimi.ai's proprietary serving system, a work parallel to ours, concurrently proposed use of this technique to reduce TTFT latency during inference. Note that, while Mooncake explores use of chunked prefills to accelerate long prefill computation, it does not address convoy effect. To the best of our knowledge, \sysname is the first system to leverage chunked prefills for preemptive scheduling to tackle heterogeneity in long context serving.
+
+\myparagraph{Request scheduling}
+Efficient request scheduling has been extensively studied~\cite{fu2024efficient,sheng2023fairness,sun2024llumnix,qiu2024muserve,liu2024andes,aiops2024qiu,wu2023fast}, but existing approaches have notable limitations when addressing long-context requests.
+For example, SRTF scheduling~\cite{fu2024efficient,aiops2024qiu} reduces median latency but leads to starvation of long requests due to lack of preemption.
+LoongServe\cite{2024loongserve} supports space sharing among concurrent long requests but lacks preemption and time-sharing, resulting in significant HOL delays, especially under FCFS scheduling.
+Fairness-focused schedulers like \cite{sheng2023fairness} emphasize equitable resource distribution among clients but fail to address strict latency SLOs.
+In contrast, \sysname{} introduces a slack-based fine time sharing scheduling policy with prefill-prefill batching, enabling efficient mixing of long and short requests to meet latency SLOs.

@@ -1,0 +1,146 @@
+\section{Enabling Efficient Preemptable Prefills} \label{sec:mechanisms}
+To enable preemptive execution using chunked prefills we need to overcome three perceived barriers: the belief that chunking causes prohibitive KV-cache read amplification, concerns about latency interference between chunked operations, and the lack of preemption-friendly parallelism strategies. In this section, we present the insights that allow \sysname to systematically address these challenges.
+
+\input{figures/chunked_prefills/chunking_overhead_attn_only_fig}
+
+\input{tables/notation}
+
+\subsection{Debunking KV-Cache Read Amplification \\Inefficiency Myth} \label{sec:kv-read-amplification}
+
+Conventional wisdom maintains that chunked attention is inherently inefficient due to KV-cache read amplification---the repeated reading of cached keys and values across chunks. We analyze the attention computation from first principles and demonstrate this assumption is incorrect for modern model architectures.
+
+\myparagraph{Arithmetic Intensity Analysis}
+Modern GPU architectures feature independent compute and memory subsystems that operate concurrently in a pipelined fashion. Performance is determined by whichever subsystem becomes saturated first. When the compute subsystem is fully utilized, additional memory operations execute in parallel \textit{``for free''} without impacting the device throughput.
+
+The key metric determining this behavior is arithmetic intensity---the ratio of compute operations to memory accesses. High arithmetic intensity indicates sufficient computation per byte of data to keep compute units busy while memory transfers complete in parallel. For chunked attention, this relationship is governed by:
+
+\begin{equation}
+I^{i}_{cp}(n, c) \simeq \frac{4ic^2dh_{q}}{4icdh_{kv}} = c \frac{h_{q}}{h_{kv}}
+\label{eq:chunkedprefillai}
+\end{equation}
+
+The critical insight is that arithmetic intensity for chunked attention depends solely on chunk size, not total context length. Each chunk processes $c$ tokens, requiring reads of the full KV cache but performing a fixed number of operations per token. Furthermore, contemporary LLMs employ Grouped-Query Attention architectures where multiple query heads share KV heads (e.g., 8$\times$ in \llamaL), resulting in high arithmetic intensity such that even small chunks can saturate GPU compute.
+
+\myparagraph{Empirical Validation}
+On H100 GPUs running \llamaL, chunks of just ~40 tokens can saturate GPU compute. We find that for 1M-token contexts, 32-token chunks incur merely 11\% overhead relative to 2048-token chunks as shown in \Cref{fig:chunkedprefill:overheadattnonly}. Note that, unlike older attention implementations used prior analysis \cite{sarathi2023} --- where the chunked prefill was shown to be inefficient for long contexts --- modern attention kernels like FlashInfer and FlashAttention-2~\cite{flashinfer, flashattention2} parallelize over both query and KV dimensions, which helps in materializing the theoretical performance potential of the chunked prefill.
+
+\input{figures/experiments/prefill_decode_tradeoff/prefill_decode_tradeoff_combined_fig}
+
+\subsection{Managing Interference with Adaptive Chunking}
+\label{sec:adaptive-chunking}
+
+Having established that chunking is computationally efficient, we now address the prefill-decode latency interference in mixed batches.
+
+\myparagraph{The Throughput-Latency Tradeoff of Chunking}
+Chunked prefills face a fundamental throughput-latency tradeoff. To maximize system throughput, a scheduler must use large chunks to process prefills efficiently; however, to guarantee low decode latency for co-batched requests, it must use small chunks. This tradeoff would be trivially resolved if we could execute small chunks with minimal overhead. As shown in \cref{sec:kv-read-amplification}, even chunks as small as 40 tokens are enough to saturate \textit{attention} computation --- however, the challenge arises because different operations show varying performance characteristics. The MLP component has a significantly lower arithmetic intensity than attention --- $c$ as opposed to $c \frac{h_{q}}{h_{kv}}$ for attention, and is thus more sensitive to chunk size. Moreover, there are fixed per-chunk overheads like kernel launches that are not amortized by chunking. As shown in \Cref{fig:prefilldecode:tradeoff}, this conflict forces an undesirable choice between high throughput and low decode latency.
+
+\myparagraph{Resolving the Tradeoff with Adaptive Chunking}
+To resolve the throughput-latency tradeoff, our approach is based on the key insight that a long prefill's computational bottleneck is not static, but \textit{shifts} as the prefill progresses. Prefill computation is initially dominated by MLP layers, which require large chunks to run efficiently and achieve high throughput. As the KV cache grows, the quadratic cost of the attention operation becomes the overwhelming dominant cost. At this stage, a switch to smaller chunks is possible. While smaller chunks make the MLP computation slightly less efficient, this is an acceptable trade-off because the performance hit is negligible compared to the now-dominant cost of attention. Based on this insight, \sysname implements an \textbf{Adaptive Chunking} policy. The policy begins a prefill with large chunks and dynamically shrinks them as the bottleneck shifts, thereby maintaining a predictably low iteration time. This adaptive strategy resolves the tradeoff faced with static chunking, achieving both high prefill throughput and low decode latency, as shown in \Cref{fig:prefilldecode}.
+
+\subsection{Scalable Parallelism for Preemptive Inference}
+\label{sec:parallelism}
+
+To achieve interactive latency for million-token requests, preemptive chunking must be combined with a scalable, multi-node parallelism strategy. As existing approaches are incompatible with our preemptive model, \sysname introduces two novel techniques: Stream Pipeline Parallelism and KV-Cache Parallelism.
+
+\input{figures/parallel_strats/spp_sched_combined_fig}
+
+\myparagraph{Accelerating Prefill Computation}
+We leverage an overlooked opportunity to accelerate prefill computation: while prior works process each chunk sequentially through all model layers, we observe that the chunks of a single request can be processed concurrently across pipeline stages.
+
+In chunked prefills, chunk $i+1$ requires the KV cache from chunk $i$, but critically, it does \emph{not} need chunk $i$'s final model output. This means chunk $i+1$ can begin processing as soon as chunk $i$ completes the first pipeline stage; it does not need to wait for chunk $i$ to finish all pipeline stages.
+
+Traditional approaches that combine chunking with pipeline parallelism treat each chunk like a separate request, processing them sequentially through the entire pipeline. This leaves pipeline stages underutilized. For example, when chunk $i$ moves from Stage 1 to Stage 2, Stage 1 sits idle. To fill these "pipeline bubbles," different requests are interleaved across stages, a technique known as micro-batching.
+
+In contrast, \sysname introduces \textbf{Stream Pipeline Parallelism (SPP)}, which exploits the unique data dependency structure of chunked prefills. It schedules chunk $i+1$ to start Stage 1 immediately when chunk $i$ advances to Stage 2 \Cref{fig:sppcombined:sched}. This allows layers across all pipeline stages to operate concurrently on different chunks of the same long prefill, reducing the critical path of the prefill by the pipeline depth.
+
+This chunk-level pipelining scales effectively. As shown in \Cref{fig:sppcombined:scaling}, Stream Pipeline Parallelism scales nearly linearly with the number of stages, enabling inference on multi-million-token requests using hundreds of GPUs. Please refer to \Cref{appendix:scaling} for scaling results up to 10M tokens. Compared to context parallelism, stream pipeline parallelism is significantly faster, achieving 1.64\myx lower latency on a one-million-token prefill and reducing TTFT over 128 H100s.
+
+\input{figures/experiments/cp_prefill_scaling/cp_prefill_scaling_timeline_fig}
+
+\vspace{-0.2em}
+%
+\myparagraph{Bounding Decode Latency}
+While SPP addresses prefill latency, the decode phase presents its own scaling challenge. For long contexts, decode latency grows linearly with the sequence length, leading to high TPOT and a poor user experience. Furthermore, in mixed batches, even the smallest efficient prefill chunk (as determined by Adaptive Chunking) can still significantly slow down the decode operation when operating with very long contexts or larger models, creating a need for an additional mechanism to control iteration time.
+
+\sysname introduces \textbf{KV-Cache Parallelism (KVP)} as a unified mechanism to address both challenges by parallelizing the KV cache reads across multiple devices along the sequence dimension. During any computation step (either a decode token or a prefill chunk), the query is replicated to each device, which computes a partial attention output in parallel using its local shard. These partial outputs are then combined using online-softmax.
+
+KVP provides two critical, complementary benefits. First, for the decode phase, it places an upper bound on TPOT by ensuring the decode time can be capped for long requests, as shown in \Cref{fig:kvpresults:latency}. Second, for the prefill phase, KVP offers a new lever to manage latency interference that is complementary to Adaptive Chunking. It allows the scheduler to use larger, more throughput-efficient chunks while still meeting decode SLOs by parallelizing the chunk's internal attention computation, improving the overall TTFT-TPOT tradeoff as shown in \Cref{fig:kvpresults:tradeoff}. \sysname uses a \textit{progressive scaling} strategy, dynamically adding KVP workers as the context grows to maintain a near-consistent iteration latency. We provide additional KVP results in the appendix \Cref{appendix:scaling}.
+
+\input{figures/parallel_strats/kvp_results_combined}
+
+\vspace{-0.5em}
+\begin{takeawaybox}
+\textbf{\textit{Takeaway:}} When paired with mechanisms for scaling computation, chunked prefills provide a viable foundation for preemptive long-context inference.
+\end{takeawaybox}
+
+
+\section{Scheduling Policies for Preemptive Inference}
+\label{sec:policies}
+
+The mechanisms presented in \Cref{sec:mechanisms} provide the necessary tools for preemptive inference for long-context requests. However, these are not sufficient on their own. To effectively navigate the throughput-latency tradeoff and resolve convoy effects with a mix of long and short requests, a robust scheduling policy is required. \Cref{fig:hld} illustrates how \sysname orchestrates these components: the Replica Controller implements our scheduling policies through a slack-aware Batch Scheduler that maintains request priorities using LARS, and a Batch Packer that constructs optimal batches guided by runtime predictions. These batches are then dispatched to the 3D Parallel Execution Engine, which leverages our novel combination of KVP, SPP, and TP to execute them efficiently. This section details the scheduling policies that drive these components---how \sysname prioritizes requests to prevent convoy effects (\Cref{sec:prioritization}), co-locates complementary prefills to improve throughput (\Cref{sec:multi-prefill-batching}), and packs batches to meet strict SLO requirements (\Cref{sec:batch-packing}).
+
+\subsection{An SLO-Aware Prioritization Policy}
+\label{sec:prioritization}
+
+\input{figures/parallel_strats/3dp_fig}
+
+In this section, we develop an online scheduling policy that prevents convoy effects while avoiding starvation, operating with sub-millisecond overhead. We analyze why widely used policies for LLM inference --- FCFS, EDF, and LRS fail under extreme heterogeneity, then present the approach adopted by \sysname{}: Length-Aware Relative Slack (LARS).
+
+\myparagraph{Problem Formulation}
+We consider a stream of requests $\mathcal{R} = \{r_1, r_2, ...\}$ where each request $r_i$ is characterized by: arrival time $a_i$, total work requirement $w_i^{\text{total}}$ (total computation time), and deadline $d_i$ relative to its arrival. At any time $t$, a request has remaining work $w_i(t)$ where $w_i(a_i) = w_i^{\text{total}}$. The scheduler must assign each request to time slots on available GPUs to maximize goodput -- the fraction of requests meeting their deadlines, without introducing any systematic bias towards long or short requests.
+
+\myparagraph{Illustrative Scenario}
+To understand how different policies handle heterogeneous workloads, consider a simple instance with three requests. Let request $r_L$ have $w_L^{\text{total}} = 10$ seconds with deadline $d_L = 16$ seconds. Let requests $r_S^1, r_S^2$ each have $w_S^{\text{total}} = 0.5$ seconds with deadlines $d_S = 1$ second. Request $r_L$ arrives at time 0; $r_S^1, r_S^2$ arrive at time 5. How should we schedule these requests to meet their deadlines?
+
+\myparagraph{Straw-man Solutions}
+Most inference systems default to First-Come, First-Served (FCFS) for its simplicity and fairness \cite{vllmsosp, tensorrtllm:github, 2024loongserve, agrawal2024taming, mooncake}. Under FCFS, $r_L$ executes from time 0 to 10. Requests $r_S^1, r_S^2$ wait until time 10, missing their deadlines at time 6. This demonstrates the convoy effect: short requests experience deadline violations when queued behind long-running requests. The non-preemptive nature that makes FCFS simple also makes it unsuitable for heterogeneous SLO requirements. The convoy effect is a fundamental problem in scheduling heterogeneous workloads.
+
+The natural solution is to prioritize urgent requests. Earliest Deadline First (EDF) implements this intuition directly: always schedule the request whose deadline is soonest. Initially, EDF works as intended. At time 5, $r_S^1, r_S^2$ preempt $r_L$ since $d_S^1 = d_S^2 = 6 < d_L = 16$. However, continuous arrivals of short requests cause $r_L$ to accumulate delay. Once time exceeds $d_L$, the system enters a pathological state: $r_L$ now has a deadline $d_L <$ current time $t$, necessarily earlier than any future arrival. EDF then executes $r_L$ to completion, creating a convoy. The policy exhibits two distinct failure modes: initial starvation of long requests, followed by convoy formation for short ones. Under a constant stream of requests, both long and short requests end up missing their deadlines, and the EDF ends up performing comparable to the non-preemptive FCFS baseline (\Cref{sec:eval:sched}).
+
+\myparagraph{Length-Aware Relative Slack (LARS)}
+Slack-based scheduling naturally captures deadline urgency by tracking the time buffer before violation: $s_i = a_i + d_i - t - w_i(t)$. However, in heterogeneous workloads, raw slack values can be misleading. Two requests with identical 2-second slack face vastly different risks if one requires 5 seconds of work while another requires 100 seconds -- the longer request must survive far more scheduling decisions and potential preemptions.
+
+LARS refines slack-based scheduling for heterogeneous workloads by scaling slack relative to work requirement: $\rho_i = s_i / w_i^{\text{total}}$. In our example, when $r_L$ arrives with absolute slack of 6 seconds but relative slack $\rho_L = 0.6$, LARS recognizes its vulnerability -- despite the seemingly comfortable buffer, it has limited slack per unit of work. Short requests arriving with $\rho_S = 1.0$ can afford to wait initially; they preempt only when their relative slack drops below the long request's.
+
+This approach ensures all requests, regardless of length, make proportional progress toward their deadlines. Short requests still receive priority when urgent (low relative slack), but long requests aren't perpetually starved as in EDF. The result is a natural balance that avoids both convoy effects and starvation.
+
+\subsection{Multi-Prefill Batching by Exploiting Arithmetic Intensity Slack}
+\label{sec:multi-prefill-batching}
+
+Beyond preemptive scheduling, \sysname improves system throughput by optimizing the composition of each batch. In standard chunked prefill-based scheduling \cite{agrawal2024taming}, typically only one prefill at a time. This is based on the rationale that batching multiple prefills does not improve throughput, because a single prefill chunk is already sufficient to saturate the GPU compute. However, with adaptive chunking, we observe that prefill operations at different stages of their execution have complementary resource needs -- and can benefit from batching.
+
+\myparagraph{Arithmetic Intensity Slack in Adaptive Chunking}
+We observe an opportunity to piggyback computation of short prefill requests with long prefills that allows us to compute the short prefills at a negligible cost. As \Cref{sec:adaptive-chunking}, the adaptive chunking policy dictates that we must use smaller chunks for later stages of long context prefills (when the attention cost is dominant). While the small chunk size is sufficient to saturate the attention operation, it leaves the MLP operation memory-bound. This creates \textbf{\textit{arithmetic intensity slack}}, \ie{} unused computational capacity within a batch -- which can be used to perform additional compute for negligible cost.
+
+\myparagraph{Multi-Prefill Batching Policy}
+To leverage this slack, the scheduler co-locates two prefill chunks in the same batch with complementary profiles -- packing a short, early-stage (MLP-dominant) chunk and one long, late-stage (Attention-dominant) chunk. As shown in \Cref{sec:eval:sched}, results in 1.8\myx improvement in overall system throughput.
+
+\subsection{Dynamic Batch Packing for SLO Adherence}
+\label{sec:batch-packing}
+
+\myparagraph{Time Budget}
+The batch packer constructs batches that maximize throughput while respecting a strict iteration time budget $t_{target}$. This budget, derived from decode requests' TPOT SLOs, ensures prefill operations cannot delay latency-sensitive decode tokens. Every scheduling cycle must complete within $t_{target}$ to maintain predictable decode latencies.
+
+\myparagraph{Iterative Batch Packing}
+The batch packer employs a two-phase greedy algorithm guided by a runtime performance model \Cref{alg:batch-formation}. First, it adds all active decode requests, establishing a baseline execution time $t_{decode}$. Second, it iteratively fills the remaining budget ($t_{target} - t_{decode}$) with prefill chunks in LARS priority order. For each prefill, the packer uses binary search to find the maximum chunk size that fits within the remaining budget. This process continues until the budget is exhausted or no viable chunks remain.
+
+Critically, this fixed-budget approach naturally implements adaptive chunking (\Cref{sec:adaptive-chunking}): early-phase prefills with empty KV caches fit large chunks within the budget, while late-phase prefills with populated KV caches are constrained to smaller chunks.
+
+\myparagraph{Space Sharing for Multi-Prefill Batching}
+As discussed in \Cref{sec:multi-prefill-batching}, the packer co-locates prefill chunks from different requests to fill the arithmetic slack and improve system throughput. Long prefills voluntarily yield a portion of their time budget based on their slack -- a request with relative slack $\rho$ uses only $(1 - \rho) \times t_{target}$, capped at a maximum yielding fraction. This mechanism creates space for short prefills without jeopardizing the long request's deadline.
+
+Consider a long prefill with 20\% relative slack: it yields 20\% of the budget, using 16ms of the 20ms allocation. The remaining 4ms allows the packer to insert short prefills, improving overall throughput while both requests progress toward their deadlines. To prevent contention, at most one long prefill is scheduled per batch.
+
+\myparagraph{Runtime Prediction}
+The packer relies on accurate runtime predictions to make informed decisions. We use Vidur~\cite{vidur}, a performance model with <5\% prediction error. The model accounts for both chunk size and KV cache state, enabling the packer to precisely fill the time budget without violations. Through binary search over possible chunk sizes, the packer maximizes resource utilization within each scheduling cycle.
+
+
+\section{Implementation}
+\label{sec:optimizations}
+
+\sysname{} extends the Sarathi-Serve framework \cite{agrawal2024taming} to tackle multi-million token context requests.
+Unlike vLLM and Sarathi-Serve, which incur overhead from centralized schedulers as sequence length grows, we reduce communication by replicating sequence state across the scheduler and GPU workers.
+
+We replace Ray~\cite{ray} with ZeroMQ~\cite{zmq} for scheduler-worker communication, eliminating GIL contention as we scale to hundreds of workers.
+We also integrate FlashInfer~\cite{flashinfer} kernels to distribute work across both query and KV tokens, optimizing chunked prefill for long contexts.
+To meet strict latency targets with small prefill chunks, we implement the model execution engine's critical path in C++ using PyBind, ensuring seamless integration with the Python codebase.

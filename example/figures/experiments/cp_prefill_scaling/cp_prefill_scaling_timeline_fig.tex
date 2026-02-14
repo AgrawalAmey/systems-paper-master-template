@@ -1,0 +1,21 @@
+\begin{figure}[t!]
+    \centering
+    \begin{subfigure}[b]{0.4\linewidth}
+    \centering    
+    \includegraphics[width=0.9\textwidth]{figures/parallel_strats/kvp.pdf}
+    \caption{Sharding schema in KVP.}
+    \label{fig:kvp:schema}
+    \end{subfigure}
+    \hfill  % Optional: adds horizontal space between subfigures
+    \begin{subfigure}[b]{0.57\linewidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/experiments/cp_prefill_scaling/cp_groups_and_kv_cache_vs_time_2m_cs256_cp4_7b.pdf}
+    \caption{KVP Execution Timeline.}
+    \label{fig:kvp:scaling}
+    \end{subfigure}
+    
+    \caption{KV Parallelism distributes the KV-cache state across GPUs to minimize the latency of long requests. During prefill, KVP dynamically scales resources as the KV produced grows to maintain consistent iteration times irrespective of context length.  While processing 2M tokens with \llamaS using $p_{tp}=8$, $p_{kvp}=4$, and $p_{spp}=4$.
+    \sysname{} starts with a single KVP worker group (4 servers) and progressively scales up to 16 servers.
+    }
+    \label{fig:kvp}
+\end{figure}

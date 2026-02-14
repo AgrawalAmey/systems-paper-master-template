@@ -1,0 +1,25 @@
+\section{Evaluation}
+\label{sec:eval}
+
+We evaluate \sysname to answer the following questions:
+\squishlist
+  \item How does \sysname compare to existing approaches on end-to-end workloads?
+  \item What is the contribution of each design component?
+\squishend
+
+\subsection{Experimental Setup}
+\label{sec:setup}
+
+We implement \sysname in approximately 5,000 lines of code.
+We compare against two baselines using standard benchmarks~\cite{dean2013tail}.
+
+\subsection{End-to-End Results}
+\label{sec:e2e}
+
+\sysname achieves significant improvements over the baselines across all metrics.
+
+\subsection{Ablation Study}
+\label{sec:ablation}
+
+We evaluate the contribution of each component by selectively disabling them.
+Results confirm that both components are essential for achieving the full performance gains~\cite{barroso2017datacenter,lamport1998paxos}.

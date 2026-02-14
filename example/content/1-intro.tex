@@ -1,0 +1,57 @@
+\section{Introduction}
+
+
+% Start with applications and why long context matters
+Large language models with million-token context windows are transforming how we interact with information -- enabling large-scale document analysis, multi-hour video understanding \cite{gemini,llama4,qwen2.5}, and autonomous coding agents \cite{anthropic2025claudecode, google2025geminicli}.
+However, deploying these models in production poses a significant challenge: real-world workloads combine both long and short requests. A single service must handle everything from 100-token chat messages to 10M-token document processing, often from the same users within the same session.
+
+
+\input{figures/mnemosyne_banner_fig}
+
+% Why this mixture creates problems
+\textbf{Motivation.}
+This mix of request lengths to the same model instance creates extreme computational heterogeneity due to the quadratic complexity of self-attention~\cite{attentionpaper}.
+A 100K-token request is not 100\myx but approximately 10,000\myx more computationally expensive than a 1K-token request.
+When these requests share the same serving infrastructure, we run into severe performance degradation due to: the \textit{convoy effect}~\cite{ostep,dino}, where long-running requests block shorter ones, resulting in poor system responsiveness.
+As shown in \Cref{fig:banner}, even with just 5\% long requests in the workload, state-of-the-art systems like \ls~\cite{2024loongserve} experience 30\myx median latency increases and 174\myx tail latency degradation for short requests.
+
+% Why current solutions fail
+Context Parallelism (CP)~\cite{liu2023ring,brandon2023striped} has made it possible to distribute long-context processing across hundreds of GPUs, enabling effective training for long-context models.
+\ls~\cite{2024loongserve} and Yang et al. \cite{yang2023cp}
+adapted these techniques for inference by introducing elasticity to context parallelism, dynamically adjusting the degree of parallelism based on request length to improve resource efficiency.
+However, these approaches fundamentally lack preemptability --- once a long request begins processing, it cannot be interrupted until completion.
+This non-preemptive execution model inevitably results in convoy effects in heterogeneous workloads.
+\Cref{fig:banner:hol} demonstrates this problem empirically: \ls exhibits severe latency spikes lasting for 100s of seconds whenever long requests block the system.
+These spikes occur because arriving short requests must wait for the entire prefill computation of the long request to complete --- which can take several minutes.
+
+% Core insight: Need preemption
+The convoy effect is a well-studied problem in operating systems with a known solution: preemptive scheduling.
+Chunked prefills \cite{agrawal2024taming} provide a natural mechanism for preemptable prefill computation.
+However, applying preemption to LLM inference faces three barriers that have discouraged its adoption.
+First, chunking long prefills are considered inefficient due to\textbf{\textit{ repeated KV-cache reads.}}
+Second, batching decodes requests with chunked prefills for long requests results in \textbf{\textit{high decode latency}} that degrades user experience.
+Finally, existing context parallelism techniques for long-context inference are \textbf{\textit{fundamentally incompatible with chunked execution}}.
+
+\input{figures/scheduling/convoy_effect_fig}
+
+% Our approach: Making preemption practical
+\textbf{Our work.}
+\sysname makes preemptive long-context inference practical by systematically addressing each barrier.
+We demonstrate that KV-cache read amplification is a non-issue for modern architectures -- chunks as small as 40 tokens achieve near-optimal efficiency due to high arithmetic intensity in grouped-query attention.
+We introduce \textit{adaptive chunking}, which dynamically adjusts chunk sizes as the computational bottleneck shifts from MLP to attention operations, maintaining both high throughput and predictable latency.
+We develop two parallelism strategies compatible with preemption:
+\textbf{\textit{Stream Pipeline Parallelism (SPP)}} accelerates prefills by pipelining chunks across stages, while \textbf{\textit{KV-Cache Parallelism (KVP)}} bounds decode latency by distributing attention computation.
+
+% Scheduling contribution
+To effectively leverage the preemptable prefills, we introduce Length-Aware Relative Slack (LARS), a deadline-aware  scheduling policy designed to explicitly tackle the heterogeneous nature of long-context inference. Unlike traditional policies that either cause convoy effects (First Come First Serve - FCFS) or starvation (Earliest Deadline First - EDF, Least Remaining Slack - LRS), LARS ensures both short and long requests meet their deadlines by pushing completions toward their SLO boundaries -- maximizing schedule robustness against unpredictable arrivals. Furthermore, we introduce a  dynamic batch packing algorithm that creates batches that maximally utilize GPU compute by co-locating complementary prefill chunks and decode requests while respecting strict time budgets.
+
+\sysname unifies these techniques in a unified serving system that scales to multi-million token requests while maintaining high throughput and low latency. In summary, we make the following contributions in this paper:
+\begin{itemize}[leftmargin=*,noitemsep,topsep=1pt]
+    \item We identify and quantify the convoy effect in long-context inference arising due to request-length heterogeneity in current non-preemptive systems.
+
+    \item We make chunked prefills viable for preemptive long-context inference by systematically addressing their perceived inefficiencies: introducing adaptive chunking to balance throughput and latency, and developing Stream Pipeline Parallelism (SPP) and KV-Cache Parallelism (KVP) as preemption-compatible parallelism strategies.
+
+    \item We propose Length-Aware Relative Slack (LARS), a scheduling policy that prevents convoy effects and starvation by  accounting for workload heterogeneity and user SLOs.
+
+    \item We implement \sysname with optimized kernels and scheduler design, demonstrating 5.7\myx higher throughput and up to 174\myx lower tail latency than state-of-the-art non-preemptive systems on real long-context workloads.
+\end{itemize}

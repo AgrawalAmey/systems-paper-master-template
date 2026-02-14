@@ -1,0 +1,13 @@
+\begin{figure*}
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/experiments/cp_prefill_scaling/cache_parallel_prefill_vs_batch_llama_7b_full.pdf}
+    % \caption{
+    %     TTFT (prefill latency) vs TBT (P95 batch execution latency) with \sysname{} 3D parallelism ($p_{spp} = 4$) for \llamaS, as we sweep the chunk size from 32 to 256. 
+    %     \esha{add 10M, and fix the seq length to say 1M, 2M, 4M -- also change x axis to say TTFT, and y-axis to say P95 TBT}\alexey{agreed, let's be consistent throughout. And, for completeness, we do need all 4: 1M 2M 4M 10M. If at all possible, a dashed red like for 30ms TBT SLO? Or add it as an explicit ytick instead of adding another line.}
+    %     \alexey{These plots are very important e2e results. Given the TBT/TTFT SLO ``cross-hairs'' we can determine the feasibility regions in the config space and pick the optimal config that satisfies both SLOs.}
+    % }
+    \caption{
+    Trade-off Between TTFT and P95 TBT for \llamaS using \sysname 3D Parallelism ($p_{tp} = 4$, $p_{spp} = 4$) for varying KVP degrees and chunk sizes (32-256).
+    }
+    \label{fig:kvpscaling:prefill:ttft}
+\end{figure*}
