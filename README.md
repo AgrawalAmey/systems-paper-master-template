@@ -432,3 +432,16 @@ The template handles several cross-venue compatibility challenges automatically:
 - **MLSys title pattern**: MLSys requires `\twocolumn[\mlsystitle{...}...]` instead of `\maketitle`.
 - **Author marks in ACM**: ACM's `\MakeUppercase` breaks bare math mode. Resolved with `\textsuperscript{$...$}` wrapping.
 
+## Claude Code Integration
+
+This project includes [Claude Code](https://claude.com/claude-code) skills for common paper-writing tasks:
+
+| Skill | Description |
+|-------|-------------|
+| `/orphans` | Fix orphan/widow words by inserting `~` ties |
+| `/fix-compile` | Iteratively fix compilation errors and warnings |
+| `/validate-numbers` | Cross-check numbers in text against figures/tables |
+| `/check-refs` | Find broken references, dead labels, unused citations |
+| `/switch-venue <name>` | Switch target conference and verify compilation |
+| `/camera-ready` | Prepare for camera-ready (hide comments, find TODOs) |
+| `/consistency` | Check terminology, capitalization, and style consistency |
