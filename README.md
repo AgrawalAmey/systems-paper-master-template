@@ -22,8 +22,6 @@ make
 | MLSys | ML | `mlsys2024.sty` | Ready |
 | NeurIPS | ML | `neurips_2025.sty` | Ready |
 | COLM | ML | `colm2025_conference.sty` | Ready |
-| ICML | ML | — | Needs `.sty` |
-| ICLR | ML | — | Needs `.sty` |
 | OSDI | USENIX | `usenix-2020-09.sty` | Ready |
 | NSDI | USENIX | `usenix-2020-09.sty` | Ready |
 | ASPLOS | ACM | `acmart.cls` | Ready |

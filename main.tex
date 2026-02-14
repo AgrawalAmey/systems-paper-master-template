@@ -1,7 +1,7 @@
 % ============================================================
 %  SYSTEMS PAPER MASTER TEMPLATE
 %
-%  Supports: MLSys, NeurIPS, COLM, ICML, ICLR,
+%  Supports: MLSys, NeurIPS, COLM,
 %            OSDI, NSDI,
 %            SOSP, EuroSys, ASPLOS, SoCC,
 %            VLDB, SIGMOD
@@ -23,8 +23,6 @@
 \def\confmlsys{mlsys}
 \def\confneurips{neurips}
 \def\confcolm{colm}
-\def\conficml{icml}
-\def\conficlr{iclr}
 \def\confosdi{osdi}
 \def\confsosp{sosp}
 \def\confnsdi{nsdi}
@@ -55,8 +53,6 @@
 \ifx\targetconference\confmlsys   \mlvenuetrue \fi
 \ifx\targetconference\confneurips \mlvenuetrue \fi
 \ifx\targetconference\confcolm    \mlvenuetrue \fi
-\ifx\targetconference\conficml    \mlvenuetrue \fi
-\ifx\targetconference\conficlr    \mlvenuetrue \fi
 
 
 % ============================================================
@@ -241,7 +237,7 @@
     }
 \fi
 
-% --- NeurIPS, COLM, ICML, ICLR (condensed with numbered institutions) ---
+% --- NeurIPS, COLM (condensed with numbered institutions) ---
 \ifmlvenue
     \ifx\targetconference\confmlsys\else
         \title{\papertitle}
@@ -317,7 +313,7 @@
     \printAffiliationsAndNotice{\renderauthorfn}
 \fi
 
-% --- NeurIPS, COLM, ICML, ICLR: maketitle then abstract ---
+% --- NeurIPS, COLM: maketitle then abstract ---
 \ifmlvenue
     \ifx\targetconference\confmlsys\else
         \maketitle
